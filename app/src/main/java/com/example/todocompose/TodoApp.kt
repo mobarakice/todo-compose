@@ -32,7 +32,7 @@ fun TodoApp(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute =
-        navBackStackEntry?.destination?.route ?: TodoDestinations.TASKS
+        navBackStackEntry?.destination?.route ?: TodoDestinations.TASKS_ROUTE
 
     val isExpandedScreen = widthSizeClass == WindowWidthSizeClass.Expanded
     val sizeAwareDrawerState = rememberSizeAwareDrawerState(isExpandedScreen)
@@ -41,11 +41,12 @@ fun TodoApp(
         drawerContent = {
             AppDrawer(
                 currentRoute = currentRoute,
-                navigateToTask = navigationActions.navigateToTask,
-                navigateToStatistics = navigationActions.navigateToStatistics,
-//            navigateToStatistics = {
-//                navigationActions.navigateTo(TodoDestinations.STATISTICS)
-//            },
+                navigateToTask = {
+                    navigationActions.navigateToTasks(
+                        ADD_EDIT_RESULT_OK
+                    )
+                },
+                navigateToStatistics = { navigationActions.navigateToStatistics() },
                 closeDrawer = { coroutineScope.launch { sizeAwareDrawerState.close() } }
             )
         },
@@ -55,7 +56,6 @@ fun TodoApp(
         Row {
             TodoNavGraph(
                 repository = repository,
-                isExpandedScreen = isExpandedScreen,
                 navController = navController,
                 openDrawer = { coroutineScope.launch { sizeAwareDrawerState.open() } },
             )

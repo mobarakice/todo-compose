@@ -2,8 +2,11 @@ package com.example.todocompose.data.db
 
 import com.example.todocompose.data.db.entity.Task
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 /**
  * This Database repository implementation class, all business logic that related to database will be implemented here
@@ -13,7 +16,15 @@ import kotlinx.coroutines.launch
 class TaskRepositoryImpl(private val db: AppDatabase) : TaskRepository {
 
     override fun observeTasks(): Flow<List<Task>> {
-        return db.taskDao().observeTasks()
+//        return db.taskDao().observeTasks()
+        return flow {
+            val dummy = mutableListOf<Task>()
+            for (i in 0..5){
+                dummy.add(Task("Task $i","Description $i", id = Random.nextLong()))
+            }
+            delay(100)
+            emit(dummy)
+        }
     }
 
 

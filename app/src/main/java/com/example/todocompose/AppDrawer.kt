@@ -36,14 +36,14 @@ fun AppDrawer(
         NavigationDrawerItem(
             label = { Text(stringResource(id = R.string.task_list)) },
             icon = { Icon(Icons.Filled.List, null) },
-            selected = currentRoute == TodoDestinations.TASKS,
+            selected = currentRoute == TodoDestinations.TASKS_ROUTE,
             onClick = { navigateToTask(); closeDrawer() },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
         NavigationDrawerItem(
             label = { Text(stringResource(id = R.string.statistics)) },
             icon = { Icon(painterResource(id = R.drawable.ic_statistics), null) },
-            selected = currentRoute == TodoDestinations.STATISTICS,
+            selected = currentRoute == TodoDestinations.STATISTICS_ROUTE,
             onClick = { navigateToStatistics(); closeDrawer() },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
@@ -69,7 +69,7 @@ private fun TodoLogo(modifier: Modifier = Modifier) {
 fun PreviewAppDrawer() {
     TodoComposeTheme {
         AppDrawer(
-            currentRoute = TodoDestinations.TASKS,
+            currentRoute = TodoDestinations.TASKS_ROUTE,
             navigateToTask = {},
             navigateToStatistics = {},
             closeDrawer = { }

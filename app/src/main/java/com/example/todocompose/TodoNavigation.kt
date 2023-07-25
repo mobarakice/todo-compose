@@ -6,17 +6,66 @@ import androidx.navigation.NavHostController
 /**
  * Destinations used in the [TodoApp].
  */
+import com.example.todocompose.TodoDestinationsArgs.TASK_ID_ARG
+import com.example.todocompose.TodoDestinationsArgs.TITLE_ARG
+import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
+import com.example.todocompose.TodoScreens.ADD_EDIT_TASK_SCREEN
+import com.example.todocompose.TodoScreens.STATISTICS_SCREEN
+import com.example.todocompose.TodoScreens.TASKS_SCREEN
+import com.example.todocompose.TodoScreens.TASK_DETAIL_SCREEN
+
+/**
+ * Screens used in [TodoDestinations]
+ */
+private object TodoScreens {
+    const val TASKS_SCREEN = "tasks"
+    const val STATISTICS_SCREEN = "statistics"
+    const val TASK_DETAIL_SCREEN = "task"
+    const val ADD_EDIT_TASK_SCREEN = "addEditTask"
+}
+
+/**
+ * Arguments used in [TodoDestinations] routes
+ */
+object TodoDestinationsArgs {
+    const val USER_MESSAGE_ARG = "userMessage"
+    const val TASK_ID_ARG = "taskId"
+    const val TITLE_ARG = "title"
+}
+
+/**
+ * Destinations used in the [TodoActivity]
+ */
 object TodoDestinations {
-    const val TASKS = "tasks"
-    const val STATISTICS = "statistics"
+    const val TASKS_ROUTE = "$TASKS_SCREEN?$USER_MESSAGE_ARG={$USER_MESSAGE_ARG}"
+    const val STATISTICS_ROUTE = STATISTICS_SCREEN
+    const val TASK_DETAIL_ROUTE = "$TASK_DETAIL_SCREEN/{$TASK_ID_ARG}"
+    const val ADD_EDIT_TASK_ROUTE = "$ADD_EDIT_TASK_SCREEN/{$TITLE_ARG}?$TASK_ID_ARG={$TASK_ID_ARG}"
 }
 
 /**
  * Models the navigation actions in the app.
  */
-class TodoNavigationActions(val navController: NavHostController) {
-    val navigateToTask: () -> Unit = {
-        navController.navigate(TodoDestinations.TASKS) {
+class TodoNavigationActions(private val navController: NavHostController) {
+
+    fun navigateToTasks(userMessage: Int = 0) {
+        val navigatesFromDrawer = userMessage == 0
+        navController.navigate(
+            TASKS_SCREEN.let {
+                if (userMessage != 0) "$it?$USER_MESSAGE_ARG=$userMessage" else it
+            }
+        ) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                inclusive = !navigatesFromDrawer
+                saveState = navigatesFromDrawer
+            }
+            launchSingleTop = true
+            restoreState = navigatesFromDrawer
+        }
+    }
+
+    fun navigateToStatistics() {
+        navController.navigate(TodoDestinations.STATISTICS_ROUTE) {
             // Pop up to the start destination of the graph to
             // avoid building up a large stack of destinations
             // on the back stack as users select items
@@ -30,23 +79,16 @@ class TodoNavigationActions(val navController: NavHostController) {
             restoreState = true
         }
     }
-    val navigateToStatistics: () -> Unit = {
-        navController.navigate(TodoDestinations.STATISTICS) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
-            }
-            launchSingleTop = true
-            restoreState = true
-        }
+
+    fun navigateToTaskDetail(taskId: Long) {
+        navController.navigate("$TASK_DETAIL_SCREEN/$taskId")
     }
 
-    fun navigateTo(route: String) {
-        navController.navigate(route) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
+    fun navigateToAddEditTask(title: Int, taskId: String?) {
+        navController.navigate(
+            "$ADD_EDIT_TASK_SCREEN/$title".let {
+                if (taskId != null) "$it?$TASK_ID_ARG=$taskId" else it
             }
-            launchSingleTop = true
-            restoreState = true
-        }
+        )
     }
 }

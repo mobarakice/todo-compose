@@ -4,9 +4,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.todocompose.R
 
 @Composable
 fun TaskRoute(
@@ -18,8 +18,8 @@ fun TaskRoute(
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     TaskRoute(
-        uiState = uiState,
-        onRefreshTasks = { homeViewModel.refreshAll() },
+        viewModel = homeViewModel,
+        onRefreshTasks = { homeViewModel.refresh() },
         openDrawer = openDrawer,
         snackbarHostState = snackbarHostState,
     )
@@ -28,7 +28,7 @@ fun TaskRoute(
 
 @Composable
 fun TaskRoute(
-    uiState: TaskUiState,
+    viewModel: TasksViewModel,
     onRefreshTasks: () -> Unit,
     openDrawer: () -> Unit,
     snackbarHostState: SnackbarHostState
@@ -37,20 +37,12 @@ fun TaskRoute(
     // show. This allows the associated state to survive beyond that decision, and therefore
     // we get to preserve the scroll throughout any changes to the content.
     val taskListLazyListState = rememberLazyListState()
-    val taskListStates = when (uiState) {
-        is TaskUiState.Tasks -> uiState.tasks
-        is TaskUiState.NoTasks -> emptyList()
-    }.associate { task ->
-        key(task.id) {
-            task.id to rememberLazyListState()
-        }
-    }
-
     TaskScreen(
-        uiState = uiState,
-        onRefreshPosts = onRefreshTasks,
-        openDrawer = openDrawer,
-        taskListLazyListState = taskListLazyListState,
-        snackbarHostState = snackbarHostState
+            userMessage = R.string.empty_task_message,
+            onUserMessageDisplayed = { },
+            onAddTask = {  },
+            onTaskClick = {  },
+            openDrawer = { openDrawer() },
+        viewModel = viewModel
     )
 }
