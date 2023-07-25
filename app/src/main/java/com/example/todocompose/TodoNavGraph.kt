@@ -2,13 +2,17 @@ package com.example.todocompose
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.ui.statistics.StatisticsScreen
+import com.example.todocompose.ui.tasks.TaskRoute
 import com.example.todocompose.ui.tasks.TaskScreen
+import com.example.todocompose.ui.tasks.TasksViewModel
 
 
 @Composable
@@ -26,19 +30,17 @@ fun TodoNavGraph(
         modifier = modifier
     ) {
         composable(TodoDestinations.TASKS) {
-//            val taskViewModel: TasksViewModel = viewModel(
-//                factory = TasksViewModel.provideFactory(
-//                    repository = repository,
-//                    owner = LocalSavedStateRegistryOwner.current
-//                )
-//            )
+            val taskViewModel: TasksViewModel = viewModel(
+                factory = TasksViewModel.provideFactory(
+                    repository = repository,
+                    owner = LocalSavedStateRegistryOwner.current
+                )
+            )
 
-            TaskScreen(openDrawer)
-//            HomeRoute(
-//                homeViewModel = homeViewModel,
-//                isExpandedScreen = isExpandedScreen,
-//                openDrawer = openDrawer,
-//            )
+            TaskRoute(
+                homeViewModel = taskViewModel,
+                openDrawer = openDrawer,
+            )
         }
         composable(TodoDestinations.STATISTICS) {
 //            val stastsViewModel: StatisticsViewModel = viewModel(

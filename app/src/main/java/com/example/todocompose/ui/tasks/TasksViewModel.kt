@@ -10,65 +10,97 @@ import com.example.todocompose.data.AppRepository
 import com.example.todocompose.data.db.entity.Task
 import com.example.todocompose.utils.Event
 import com.mobarak.todo.ui.tasks.FilterType
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.*
+
+sealed interface TaskUiState {
+    val isLoading: Boolean
+    val errorMessage: Int
+
+    data class NoTasks(
+        override val isLoading: Boolean = false,
+        override val errorMessage: Int = R.string.no_tasks_all,
+    ) : TaskUiState
+
+    data class Tasks(
+        val tasks: List<Task> = emptyList(),
+        override val isLoading: Boolean = false,
+        override val errorMessage: Int = -1,
+    ) : TaskUiState
+}
+
+private data class TaskViewModelState(
+    val tasks: List<Task> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessages: Int,
+) {
+
+    fun toUiState(): TaskUiState =
+        if (tasks.isEmpty()) {
+            TaskUiState.NoTasks(
+                isLoading = isLoading,
+                errorMessage = errorMessages,
+            )
+        } else {
+            TaskUiState.Tasks(
+                tasks = tasks,
+                isLoading = isLoading,
+                errorMessage = errorMessages,
+            )
+        }
+}
 
 class TasksViewModel(
     private val repository: AppRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val _forceUpdate = MutableLiveData(false)
 
-    private val _items: LiveData<List<Task>> = _forceUpdate.switchMap { forceUpdate ->
-        if (forceUpdate) {
-            _dataLoading.value = true
-            repository.getTaskRepository()
-                .observeTasks()
-                .asLiveData()
-                .map {
-                    _dataLoading.value = false
-                    filterItems(it, getSavedFilterType())
-                }
-        } else {
-            repository.getTaskRepository()
-                .observeTasks()
-                .distinctUntilChanged()
-                .asLiveData()
-                .map {
-                    filterItems(it, getSavedFilterType())
-                }
-        }
-    }
+    private val viewModelState = MutableStateFlow(
+        TaskViewModelState(
+            isLoading = true,
+            errorMessages = R.string.loading_tasks_error
+        )
+    )
 
-    val items: LiveData<List<Task>> = _items
+    val uiState: StateFlow<TaskUiState> = viewModelState
+        .map(TaskViewModelState::toUiState)
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            viewModelState.value.toUiState()
+        )
 
-    private val _dataLoading = MutableLiveData<Boolean>()
-    val dataLoading: LiveData<Boolean> = _dataLoading
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+    private val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
 
-    private val _currentFilteringLabel = MutableLiveData<Int>()
-    val currentFilteringLabel: LiveData<Int> = _currentFilteringLabel
+    private val _currentFilteringLabel = MutableStateFlow(-1)
+    val currentFilteringLabel: StateFlow<Int> = _currentFilteringLabel
 
-    private val _noTasksLabel = MutableLiveData<Int>()
-    val noTasksLabel: LiveData<Int> = _noTasksLabel
+    private val _noTasksLabel = MutableStateFlow(-1)
+    val noTasksLabel: StateFlow<Int> = _noTasksLabel
 
-    private val _noTaskIconRes = MutableLiveData<Int>()
-    val noTaskIconRes: LiveData<Int> = _noTaskIconRes
+    private val _noTaskIconRes = MutableStateFlow(-1)
+    val noTaskIconRes: StateFlow<Int> = _noTaskIconRes
 
-    private val _tasksAddViewVisible = MutableLiveData<Boolean>()
-    val tasksAddViewVisible: LiveData<Boolean> = _tasksAddViewVisible
+    private val _tasksAddViewVisible = MutableStateFlow(false)
+    val tasksAddViewVisible: StateFlow<Boolean> = _tasksAddViewVisible
 
-    private val _snackbarText = MutableLiveData<Event<Int>>()
-    val snackbarText: LiveData<Event<Int>> = _snackbarText
+    private val _snackbarText = MutableStateFlow(Event(-1))
+    val snackbarText: StateFlow<Event<Int>> = _snackbarText
 
-    // Not used at the moment
-    private val isDataLoadingError = MutableLiveData<Boolean>()
+    private val _openTaskEvent = MutableStateFlow<Event<Long>>(Event(-1))
+    val openTaskEvent: StateFlow<Event<Long>> = _openTaskEvent
 
-    private val _openTaskEvent = MutableLiveData<Event<Long>>()
-    val openTaskEvent: LiveData<Event<Long>> = _openTaskEvent
-
-    private val _newTaskEvent = MutableLiveData<Event<Unit>>()
-    val newTaskEvent: LiveData<Event<Unit>> = _newTaskEvent
+    private val _newTaskEvent = MutableStateFlow(Event(Unit))
+    val newTaskEvent: StateFlow<Event<Unit>> = _newTaskEvent
 
     private var resultMessageShown: Boolean = false
 
@@ -136,7 +168,39 @@ class TasksViewModel(
      * @param forceUpdate Pass in true to refresh the data in the [AppRepository]
      */
     fun loadTasks(forceUpdate: Boolean) {
-        _forceUpdate.value = forceUpdate
+
+        viewModelState.update {
+            it.copy(isLoading = true)
+        }
+        viewModelScope.launch {
+            // Trigger repository requests in parallel
+            val items = if (forceUpdate) {
+                repository.getTaskRepository()
+                    .observeTasks()
+                    .distinctUntilChanged()
+                    .stateIn(
+                        viewModelScope,
+                        SharingStarted.WhileSubscribed(3000),
+                        emptyList()
+                    )
+            } else {
+                tasks
+            }
+            _tasks.update {
+                items.value
+            }
+
+
+            val filterItems = filterItems(tasks.value, getSavedFilterType())
+
+            viewModelState.update {
+                it.copy(
+                    tasks = filterItems,
+                    isLoading = false,
+                    currentFilteringLabel.value
+                )
+            }
+        }
     }
 
     private fun filterItems(tasks: List<Task>, filteringType: FilterType): List<Task> {
@@ -157,8 +221,8 @@ class TasksViewModel(
         return tasksToShow
     }
 
-    fun refresh() {
-        _forceUpdate.value = true
+    fun refreshAll() {
+        loadTasks(false)
     }
 
     private fun getSavedFilterType(): FilterType {
