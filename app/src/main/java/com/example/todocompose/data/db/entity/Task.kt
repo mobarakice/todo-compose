@@ -3,6 +3,7 @@ package com.example.todocompose.data.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlin.random.Random
 
 /**
  * This is entity class
@@ -14,7 +15,7 @@ class Task @JvmOverloads constructor(
         @ColumnInfo(name = "description") var description: String = "",
         @ColumnInfo(name = "is_completed") var isCompleted: Boolean = false,
         @PrimaryKey(autoGenerate = true)
-        @ColumnInfo(name = "id") var id: Long =0
+        @ColumnInfo(name = "id") var id: Long = Random.nextLong()
 ) {
 
     val titleForList: String

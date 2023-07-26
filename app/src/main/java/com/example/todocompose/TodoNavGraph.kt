@@ -22,6 +22,8 @@ import com.example.todocompose.TodoDestinationsArgs.TASK_ID_ARG
 import com.example.todocompose.TodoDestinationsArgs.TITLE_ARG
 import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
 import com.example.todocompose.data.AppRepository
+import com.example.todocompose.ui.addedittask.AddEditTaskScreen
+import com.example.todocompose.ui.addedittask.AddEditTaskViewModel
 import com.example.todocompose.ui.statistics.StatisticsScreen
 import com.example.todocompose.ui.tasks.TaskRoute
 import com.example.todocompose.ui.tasks.TaskScreen
@@ -81,16 +83,23 @@ fun TodoNavGraph(
                 navArgument(TASK_ID_ARG) { type = NavType.StringType; nullable = true },
             )
         ) { entry ->
-//            val taskId = entry.arguments?.getString(TASK_ID_ARG)
-//            AddEditTaskScreen(
-//                topBarTitle = entry.arguments?.getInt(TITLE_ARG)!!,
-//                onTaskUpdate = {
-//                    navActions.navigateToTasks(
-//                        if (taskId == null) ADD_EDIT_RESULT_OK else EDIT_RESULT_OK
-//                    )
-//                },
-//                onBack = { navController.popBackStack() }
-//            )
+            val taskId = entry.arguments?.getString(TASK_ID_ARG)
+            val addEditViewModel: AddEditTaskViewModel = viewModel(
+                factory = AddEditTaskViewModel.provideFactory(
+                    repository = repository,
+                    owner = LocalSavedStateRegistryOwner.current
+                )
+            )
+            AddEditTaskScreen(
+                topBarTitle = entry.arguments?.getInt(TITLE_ARG)!!,
+                onTaskUpdate = {
+                    navActions.navigateToTasks(
+                        if (taskId == null) ADD_EDIT_RESULT_OK else EDIT_RESULT_OK
+                    )
+                },
+                onBack = { navController.popBackStack() },
+                viewModel = addEditViewModel
+            )
         }
         composable(TodoDestinations.TASK_DETAIL_ROUTE) {
 //            TaskDetailScreen(

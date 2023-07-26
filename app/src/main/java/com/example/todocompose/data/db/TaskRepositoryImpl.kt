@@ -16,15 +16,15 @@ import kotlin.random.Random
 class TaskRepositoryImpl(private val db: AppDatabase) : TaskRepository {
 
     override fun observeTasks(): Flow<List<Task>> {
-//        return db.taskDao().observeTasks()
-        return flow {
-            val dummy = mutableListOf<Task>()
-            for (i in 0..5){
-                dummy.add(Task("Task $i","Description $i", id = Random.nextLong()))
-            }
-            delay(100)
-            emit(dummy)
-        }
+        return db.taskDao().observeTasks()
+//        return flow {
+//            val dummy = mutableListOf<Task>()
+//            for (i in 0..5){
+//                dummy.add(Task("Task $i","Description $i", id = Random.nextLong()))
+//            }
+//            delay(100)
+//            emit(dummy)
+//        }
     }
 
 
