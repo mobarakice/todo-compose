@@ -20,12 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -50,12 +46,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
 import com.example.todocompose.data.db.entity.Task
@@ -73,21 +67,20 @@ fun TaskScreen(
     onTaskClick: (Task) -> Unit,
     onUserMessageDisplayed: () -> Unit,
     openDrawer: () -> Unit,
-    modifier: Modifier = Modifier,
     viewModel: TasksViewModel,
     snackbarHostState: SnackbarHostState = SnackbarHostState()
 ) {
     Scaffold(
         topBar = {
-                 TasksTopAppBar(
-                     openDrawer = { openDrawer() },
-                     onFilterAllTasks = { viewModel.setFiltering(FilterType.ALL_TASKS) },
-                     onFilterActiveTasks = { viewModel.setFiltering(FilterType.ACTIVE_TASKS) },
-                     onFilterCompletedTasks = { viewModel.setFiltering(FilterType.COMPLETED_TASKS) },
-                     onClearCompletedTasks = { viewModel.clearCompletedTasks() },
-                     onRefresh = {viewModel.refresh()},
-                     modifier = Modifier.fillMaxWidth()
-                 )
+            TasksTopAppBar(
+                openDrawer = { openDrawer() },
+                onFilterAllTasks = { viewModel.setFiltering(FilterType.ALL_TASKS) },
+                onFilterActiveTasks = { viewModel.setFiltering(FilterType.ACTIVE_TASKS) },
+                onFilterCompletedTasks = { viewModel.setFiltering(FilterType.COMPLETED_TASKS) },
+                onClearCompletedTasks = { viewModel.clearCompletedTasks() },
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddTask) {
@@ -112,7 +105,7 @@ fun TaskScreen(
             // Check for user messages to display on the screen
             uiState.userMessage?.let { message ->
                 val snackbarText = stringResource(message)
-                LaunchedEffect(snackbarHostState,viewModel, message, snackbarText) {
+                LaunchedEffect(snackbarHostState, viewModel, message, snackbarText) {
                     snackbarHostState.showSnackbar(snackbarText)
                     viewModel.snackbarMessageShown()
                 }
@@ -189,7 +182,9 @@ private fun TaskItem(
                 horizontal = dimensionResource(id = R.dimen.horizontal_margin),
                 vertical = dimensionResource(id = R.dimen.list_item_padding),
             )
-            .clickable { onTaskClick(task) }
+            .clickable {
+                onTaskClick(task)
+            }
     ) {
         Checkbox(
             checked = task.isCompleted,
@@ -332,63 +327,119 @@ private fun TopAppBarDropdownMenu(
     }
 }
 
+@Preview
 @Composable
-fun OpenTaskFilterPopup() {
-    var expanded by remember { mutableStateOf(false) }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .wrapContentSize(Alignment.TopStart)
-    ) {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                painter = painterResource(R.drawable.ic_filter_list),
-                contentDescription = "Localized description"
+private fun TasksContentPreview() {
+    TodoComposeTheme {
+        Surface {
+            TasksContent(
+                loading = false,
+                tasks = listOf(
+                    Task(
+                        title = "Title 1",
+                        description = "Description 1",
+                        isCompleted = false,
+                        id = 0
+                    ),
+                    Task(
+                        title = "Title 2",
+                        description = "Description 2",
+                        isCompleted = true,
+                        id = 1
+                    ),
+                    Task(
+                        title = "Title 3",
+                        description = "Description 3",
+                        isCompleted = true,
+                        id = 2
+                    ),
+                    Task(
+                        title = "Title 4",
+                        description = "Description 4",
+                        isCompleted = false,
+                        id = 3
+                    ),
+                    Task(
+                        title = "Title 5",
+                        description = "Description 5",
+                        isCompleted = true,
+                        id = 4
+                    ),
+                ),
+                currentFilteringLabel = R.string.label_all,
+                noTasksLabel = R.string.no_tasks_all,
+                noTasksIconRes = R.drawable.logo_no_fill,
+                onRefresh = { },
+                onTaskClick = { },
+                onTaskCheckedChange = { _, _ -> },
             )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            properties = PopupProperties(focusable = true),
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Edit") },
-                onClick = { /* Handle edit! */ },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Edit,
-                        contentDescription = null
-                    )
-                })
-            DropdownMenuItem(
-                text = { Text("Settings") },
-                onClick = { /* Handle settings! */ },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Settings,
-                        contentDescription = null
-                    )
-                })
-            Divider()
-            DropdownMenuItem(
-                text = { Text("Send Feedback") },
-                onClick = { /* Handle send feedback! */ },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Email,
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = { Text("F11", textAlign = TextAlign.Center) })
         }
     }
 }
 
-
-@Composable
 @Preview
-fun PreviewTaskScreen() {
+@Composable
+private fun TasksContentEmptyPreview() {
     TodoComposeTheme {
-        //TaskScreen(openDrawer = {})
+        Surface {
+            TasksContent(
+                loading = false,
+                tasks = emptyList(),
+                currentFilteringLabel = R.string.label_all,
+                noTasksLabel = R.string.no_tasks_all,
+                noTasksIconRes = R.drawable.logo_no_fill,
+                onRefresh = { },
+                onTaskClick = { },
+                onTaskCheckedChange = { _, _ -> },
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun TasksEmptyContentPreview() {
+    TodoComposeTheme {
+        Surface {
+            TasksEmptyContent(
+                noTasksLabel = R.string.no_tasks_all,
+                noTasksIconRes = R.drawable.logo_no_fill
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun TaskItemPreview() {
+    TodoComposeTheme {
+        TaskItem(
+            task = Task(
+                title = "Title",
+                description = "Description",
+                id = 0
+            ),
+            onTaskClick = { },
+            onCheckedChange = { }
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun TaskItemCompletedPreview() {
+    TodoComposeTheme {
+        Surface {
+            TaskItem(
+                task = Task(
+                    title = "Title",
+                    description = "Description",
+                    isCompleted = true,
+                    id = 0
+                ),
+                onTaskClick = { },
+                onCheckedChange = { }
+            )
+        }
     }
 }

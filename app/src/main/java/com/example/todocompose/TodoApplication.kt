@@ -13,11 +13,9 @@ class TodoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         repository = AppRepositoryImpl(
-            Room.databaseBuilder(
-                this,
-                AppDatabase::class.java,
-                "todo.db"
-            ).build()
+            Room.databaseBuilder(this, AppDatabase::class.java, "todo.db")
+                .fallbackToDestructiveMigration()
+                .build()
         )
     }
 }

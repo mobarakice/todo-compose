@@ -51,4 +51,9 @@
     <string name="no_tasks_image_content_description">No tasks image</string>
     <string name="task_list">Todos</string>
     <string name="statistics">Statistics</string>
+    <string name="open_drawer">Open drawer</string>
+    <string name="loading_task_error">Loading task error</string>
+    <string name="task_not_found">Task not found</string>
+    <string name="task_details">Task details</string>
+    <string name="menu_back">Menu back</string>
 </resources>

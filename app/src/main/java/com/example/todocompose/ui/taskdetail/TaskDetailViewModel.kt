@@ -1,106 +1,126 @@
 package com.example.todocompose.ui.taskdetail
 
 import android.os.Bundle
-import androidx.annotation.StringRes
-import androidx.lifecycle.*
+import androidx.lifecycle.AbstractSavedStateViewModelFactory
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.todocompose.R
+import com.example.todocompose.TodoDestinationsArgs
 import com.example.todocompose.data.AppRepository
+import com.example.todocompose.data.db.TaskRepository
 import com.example.todocompose.data.db.entity.Task
-import com.example.todocompose.utils.Event
+import com.example.todocompose.utils.Result
+import com.example.todocompose.utils.WhileUiSubscribed
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class TaskDetailViewModel(
-    private val repository: AppRepository,
-    private val savedStateHandle: SavedStateHandle
-) : ViewModel() {
-    private val _taskId = MutableLiveData<Long>()
+/**
+ * UiState for the Details screen.
+ */
+data class TaskDetailUiState(
+    val task: Task? = null,
+    val isLoading: Boolean = false,
+    val userMessage: Int? = null,
+    val isTaskDeleted: Boolean = false
+)
 
-    private val _task = _taskId.switchMap { taskId ->
-        repository.getTaskRepository().observeTaskById(taskId).asLiveData().map {
-            computeResult(it)
+/**
+ * ViewModel for the Details screen.
+ */
+class TaskDetailViewModel(
+    private val taskRepository: TaskRepository,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    val taskId: Long = savedStateHandle[TodoDestinationsArgs.TASK_ID_ARG]!!
+
+    private val _userMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
+    private val _isLoading = MutableStateFlow(false)
+    private val _isTaskDeleted = MutableStateFlow(false)
+    private val _taskAsync = taskRepository.observeTaskById(taskId)
+        .map { handleTask(it) }
+        .catch { emit(Result.Error(R.string.loading_task_error)) }
+
+    val uiState: StateFlow<TaskDetailUiState> = combine(
+        _userMessage, _isLoading, _isTaskDeleted, _taskAsync
+    ) { userMessage, isLoading, isTaskDeleted, taskAsync ->
+        when (taskAsync) {
+            Result.Loading -> {
+                TaskDetailUiState(isLoading = true)
+            }
+
+            is Result.Error -> {
+                TaskDetailUiState(
+                    userMessage = taskAsync.errorMessage,
+                    isTaskDeleted = isTaskDeleted
+                )
+            }
+
+            is Result.Success -> {
+                TaskDetailUiState(
+                    task = taskAsync.data,
+                    isLoading = isLoading,
+                    userMessage = userMessage,
+                    isTaskDeleted = isTaskDeleted
+                )
+            }
         }
     }
-    val task: LiveData<Task?> = _task
-
-    val isDataAvailable: LiveData<Boolean> = _task.map { it != null }
-
-    private val _dataLoading = MutableLiveData<Boolean>()
-    val dataLoading: LiveData<Boolean> = _dataLoading
-
-    private val _editTaskEvent = MutableLiveData<Event<Unit>>()
-    val editTaskEvent: LiveData<Event<Unit>> = _editTaskEvent
-
-    private val _deleteTaskEvent = MutableLiveData<Event<Unit>>()
-    val deleteTaskEvent: LiveData<Event<Unit>> = _deleteTaskEvent
-
-    private val _snackbarText = MutableLiveData<Event<Int>>()
-    val snackbarText: LiveData<Event<Int>> = _snackbarText
-
-    // This LiveData depends on another so we can use a transformation.
-    val completed: LiveData<Boolean> = _task.map { input: Task? ->
-        input?.isCompleted ?: false
-    }
+        .stateIn(
+            scope = viewModelScope,
+            started = WhileUiSubscribed,
+            initialValue = TaskDetailUiState(isLoading = true)
+        )
 
     fun deleteTask() = viewModelScope.launch {
-        _taskId.value?.let {
-            repository.getTaskRepository().deleteTaskById(it)
-            _deleteTaskEvent.value = Event(Unit)
-        }
-    }
-
-    fun editTask() {
-        _editTaskEvent.value = Event(Unit)
+        taskRepository.deleteTaskById(taskId)
+        _isTaskDeleted.value = true
     }
 
     fun setCompleted(completed: Boolean) = viewModelScope.launch {
-        val task = _task.value ?: return@launch
+        val task = uiState.value.task ?: return@launch
         if (completed) {
-            repository.getTaskRepository().updateTask(task)
+            taskRepository.updateCompleted(task.id, task.isCompleted)
             showSnackbarMessage(R.string.task_marked_complete)
         } else {
-            repository.getTaskRepository().updateTask(task)
+            taskRepository.activateTask(task.id)
             showSnackbarMessage(R.string.task_marked_active)
         }
     }
 
-    fun start(taskId: Long) {
-        // If we're already loading or already loaded, return (might be a config change)
-        if (_dataLoading.value == true || taskId == _taskId.value) {
-            return
-        }
-        // Trigger the load
-        _taskId.value = taskId
-    }
-
-    private fun computeResult(task: Task?): Task? {
-        return if (task != null) {
-            task
-        } else {
-            showSnackbarMessage(R.string.loading_tasks_error)
-            null
-        }
-    }
-
     fun refresh() {
-        // Refresh the repository and the task will be updated automatically.
-        _task.value?.let {
-            _dataLoading.value = true
-            viewModelScope.launch {
-                repository.getTaskRepository().getTaskById(it.id)
-                _dataLoading.value = false
-            }
+        _isLoading.value = true
+        viewModelScope.launch {
+            //taskRepository.refreshTask(taskId)
+            _isLoading.value = false
         }
     }
 
-    private fun showSnackbarMessage(@StringRes message: Int) {
-        _snackbarText.value = Event(message)
+    fun snackbarMessageShown() {
+        _userMessage.value = null
+    }
+
+    private fun showSnackbarMessage(message: Int) {
+        _userMessage.value = message
+    }
+
+    private fun handleTask(task: Task?): Result<Task?> {
+        if (task == null) {
+            return Result.Error(R.string.task_not_found)
+        }
+        return Result.Success(task)
     }
 
     companion object {
-        private val TAG = TaskDetailViewModel::class.java.simpleName
         fun provideFactory(
-            myRepository: AppRepository,
+            repository: AppRepository,
             owner: SavedStateRegistryOwner,
             defaultArgs: Bundle? = null,
         ): AbstractSavedStateViewModelFactory =
@@ -111,7 +131,8 @@ class TaskDetailViewModel(
                     modelClass: Class<T>,
                     handle: SavedStateHandle
                 ): T {
-                    return TaskDetailViewModel(myRepository, handle) as T
+                    //handle = defaultArgs
+                    return TaskDetailViewModel(repository.getTaskRepository(),handle) as T
                 }
             }
     }

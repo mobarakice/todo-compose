@@ -2,11 +2,8 @@ package com.example.todocompose.data.db
 
 import com.example.todocompose.data.db.entity.Task
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 /**
  * This Database repository implementation class, all business logic that related to database will be implemented here
@@ -48,8 +45,11 @@ class TaskRepositoryImpl(private val db: AppDatabase) : TaskRepository {
         return db.taskDao().updateTask(task)
     }
 
-    override suspend fun updateCompleted(taskId: Long, completed: Boolean): Int {
-        return db.taskDao().updateCompleted(taskId, completed)
+    override suspend fun updateCompleted(taskId: Long?, completed: Boolean): Int {
+        taskId?.let {
+            return db.taskDao().updateCompleted(taskId, completed)
+        }
+        return -1
     }
 
     override suspend fun deleteTaskById(taskId: Long): Int {
@@ -62,5 +62,11 @@ class TaskRepositoryImpl(private val db: AppDatabase) : TaskRepository {
 
     override suspend fun deleteCompletedTasks(): Int {
         return db.taskDao().deleteCompletedTasks()
+    }
+
+    override suspend fun activateTask(taskId: Long?) {
+        taskId?.let {
+            updateCompleted(taskId = taskId, completed = false)
+        }
     }
 }

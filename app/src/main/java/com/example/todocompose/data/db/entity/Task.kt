@@ -3,19 +3,19 @@ package com.example.todocompose.data.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlin.random.Random
 
 /**
  * This is entity class
  * @author mobarak
  */
 @Entity(tableName = "tasks")
-class Task @JvmOverloads constructor(
+data class Task @JvmOverloads constructor(
         @ColumnInfo(name = "title") var title: String = "",
         @ColumnInfo(name = "description") var description: String = "",
         @ColumnInfo(name = "is_completed") var isCompleted: Boolean = false,
+
         @PrimaryKey(autoGenerate = true)
-        @ColumnInfo(name = "id") var id: Long = Random.nextLong()
+        @ColumnInfo(name = "id") var id: Long? = null
 ) {
 
     val titleForList: String
@@ -23,15 +23,4 @@ class Task @JvmOverloads constructor(
 
     val isActive
         get() = !isCompleted
-
-    val isEmpty
-        get() = title.isEmpty() || description.isEmpty()
-
-    override fun hashCode(): Int {
-        var result = title.hashCode()
-        result = 31 * result + description.hashCode()
-        result = 31 * result + isCompleted.hashCode()
-        result = 31 * result + id.hashCode()
-        return result
-    }
 }

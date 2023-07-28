@@ -1,47 +1,78 @@
 package com.example.todocompose.ui.statistics
 
+
 import android.os.Bundle
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistryOwner
+import com.example.todocompose.R
 import com.example.todocompose.data.AppRepository
+import com.example.todocompose.data.db.TaskRepository
 import com.example.todocompose.data.db.entity.Task
+import com.example.todocompose.utils.Result
+import com.example.todocompose.utils.WhileUiSubscribed
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * UiState for the statistics screen.
+ */
+data class StatisticsUiState(
+    val isEmpty: Boolean = false,
+    val isLoading: Boolean = false,
+    val activeTasksPercent: Float = 0f,
+    val completedTasksPercent: Float = 0f
+)
+
+/**
+ * ViewModel for the statistics screen.
+ */
 
 class StatisticsViewModel(
-    private val repository: AppRepository,
-    private val savedStateHandle: SavedStateHandle
+    taskRepository: TaskRepository
 ) : ViewModel() {
-    private val tasks: LiveData<List<Task>> =
-        repository.getTaskRepository().observeTasks().asLiveData()
-    private val _dataLoading = MutableLiveData<Boolean>(false)
-    private val stats: LiveData<StatsResult?> = tasks.map {
-        if (it.isNotEmpty()) {
-            getActiveAndCompletedStats(it)
-        } else {
-            null
-        }
-    }
 
-    val activeTasksPercent = stats.map {
-        it?.activeTasksPercent ?: 0f
-    }
-    val completedTasksPercent: LiveData<Float> = stats.map { it?.completedTasksPercent ?: 0f }
-    val dataLoading: LiveData<Boolean> = _dataLoading
-    val error: LiveData<Boolean> = tasks.map { it.isEmpty() }
-    val empty: LiveData<Boolean> = tasks.map { it.isEmpty() }
+    val uiState: StateFlow<StatisticsUiState> =
+        taskRepository.observeTasks()
+            .map { Result.Success(it) }
+            .catch<Result<List<Task>>> { emit(Result.Error(R.string.loading_tasks_error)) }
+            .map { taskAsync -> produceStatisticsUiState(taskAsync) }
+            .stateIn(
+                scope = viewModelScope,
+                started = WhileUiSubscribed,
+                initialValue = StatisticsUiState(isLoading = true)
+            )
 
     fun refresh() {
-        _dataLoading.value = true
         viewModelScope.launch {
-            repository.getTaskRepository().getTasks()
-            _dataLoading.value = false
+            //taskRepository.refresh()
         }
     }
+
+    private fun produceStatisticsUiState(taskLoad: Result<List<Task>>) =
+        when (taskLoad) {
+            Result.Loading -> {
+                StatisticsUiState(isLoading = true, isEmpty = true)
+            }
+            is Result.Error -> {
+                StatisticsUiState(isEmpty = true, isLoading = false)
+            }
+            is Result.Success -> {
+                val stats = getActiveAndCompletedStats(taskLoad.data)
+                StatisticsUiState(
+                    isEmpty = taskLoad.data.isEmpty(),
+                    activeTasksPercent = stats.activeTasksPercent,
+                    completedTasksPercent = stats.completedTasksPercent,
+                    isLoading = false
+                )
+            }
+        }
 
     companion object {
         fun provideFactory(
-            myRepository: AppRepository,
+            repository: AppRepository,
             owner: SavedStateRegistryOwner,
             defaultArgs: Bundle? = null,
         ): AbstractSavedStateViewModelFactory =
@@ -52,7 +83,7 @@ class StatisticsViewModel(
                     modelClass: Class<T>,
                     handle: SavedStateHandle
                 ): T {
-                    return StatisticsViewModel(myRepository, handle) as T
+                    return StatisticsViewModel(repository.getTaskRepository()) as T
                 }
             }
     }

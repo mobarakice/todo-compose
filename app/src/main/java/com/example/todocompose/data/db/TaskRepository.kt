@@ -14,8 +14,9 @@ interface TaskRepository {
     suspend fun getTaskById(taskId: Long): Task?
     suspend fun insertTask(task: Task)
     suspend fun updateTask(task: Task): Int
-    suspend fun updateCompleted(taskId: Long, completed: Boolean): Int
+    suspend fun updateCompleted(taskId: Long?, completed: Boolean): Int
     suspend fun deleteTaskById(taskId: Long): Int
     suspend fun deleteTasks()
     suspend fun deleteCompletedTasks(): Int
+    suspend fun activateTask(taskId: Long?)
 }

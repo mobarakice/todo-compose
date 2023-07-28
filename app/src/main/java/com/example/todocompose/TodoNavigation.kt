@@ -2,10 +2,6 @@ package com.example.todocompose
 
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-
-/**
- * Destinations used in the [TodoApp].
- */
 import com.example.todocompose.TodoDestinationsArgs.TASK_ID_ARG
 import com.example.todocompose.TodoDestinationsArgs.TITLE_ARG
 import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
@@ -34,7 +30,7 @@ object TodoDestinationsArgs {
 }
 
 /**
- * Destinations used in the [TodoActivity]
+ * Destinations used in the [MainActivity]
  */
 object TodoDestinations {
     const val TASKS_ROUTE = "$TASKS_SCREEN?$USER_MESSAGE_ARG={$USER_MESSAGE_ARG}"
@@ -80,11 +76,11 @@ class TodoNavigationActions(private val navController: NavHostController) {
         }
     }
 
-    fun navigateToTaskDetail(taskId: Long) {
+    fun navigateToTaskDetail(taskId: Long?) {
         navController.navigate("$TASK_DETAIL_SCREEN/$taskId")
     }
 
-    fun navigateToAddEditTask(title: Int, taskId: String?) {
+    fun navigateToAddEditTask(title: Int, taskId: Long?) {
         navController.navigate(
             "$ADD_EDIT_TASK_SCREEN/$title".let {
                 if (taskId != null) "$it?$TASK_ID_ARG=$taskId" else it
