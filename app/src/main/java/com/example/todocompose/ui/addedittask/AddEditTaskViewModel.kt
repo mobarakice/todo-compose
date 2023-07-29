@@ -44,7 +44,7 @@ class AddEditTaskViewModel(
     val uiState: StateFlow<AddEditTaskUiState> = _uiState.asStateFlow()
 
     init {
-        if (taskId != null) {
+        if (taskId is Long && taskId > 0) {
             loadTask(taskId)
         }
     }
@@ -58,7 +58,7 @@ class AddEditTaskViewModel(
             return
         }
 
-        if (taskId == null) {
+        if (taskId == null || taskId <0) {
             createNewTask()
         } else {
             updateTask()

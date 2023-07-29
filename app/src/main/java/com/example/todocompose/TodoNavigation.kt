@@ -82,9 +82,7 @@ class TodoNavigationActions(private val navController: NavHostController) {
 
     fun navigateToAddEditTask(title: Int, taskId: Long?) {
         navController.navigate(
-            "$ADD_EDIT_TASK_SCREEN/$title".let {
-                if (taskId != null) "$it?$TASK_ID_ARG=$taskId" else it
-            }
+            "$ADD_EDIT_TASK_SCREEN/$title?$TASK_ID_ARG=$taskId"
         )
     }
 }

@@ -57,7 +57,7 @@ fun TodoNavGraph(
             TaskScreen(
                 userMessage = entry.arguments?.getInt(USER_MESSAGE_ARG)!!,
                 onUserMessageDisplayed = { entry.arguments?.putInt(USER_MESSAGE_ARG, 0) },
-                onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, null) },
+                onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, -1) },
                 onTaskClick = {
                         task -> navActions.navigateToTaskDetail(task.id) },
                 openDrawer = openDrawer,
@@ -77,7 +77,7 @@ fun TodoNavGraph(
             TodoDestinations.ADD_EDIT_TASK_ROUTE,
             arguments = listOf(
                 navArgument(TITLE_ARG) { type = NavType.IntType },
-                navArgument(TASK_ID_ARG) { type = NavType.LongType},
+                navArgument(TASK_ID_ARG) { type = NavType.LongType; defaultValue = -1},
             )
         ) { entry ->
             val taskId = entry.arguments?.getLong(TASK_ID_ARG)
