@@ -19,12 +19,60 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+        flavorDimensions.addAll('poc', 'prod')
     }
 
+    signingConfigs {
+        releaseConfig {
+            keyAlias 'todo'
+            keyPassword 'todosignkey'
+            storeFile file('../keystore/todosignkey.jks')
+            storePassword 'todosignkey'
+        }
+    }
     buildTypes {
-        release {
-            minifyEnabled false
+        debug {
+            minifyEnabled(false)
+            signingConfig(signingConfigs.releaseConfig)
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable(true)
+        }
+        release {
+            minifyEnabled(true)
+            signingConfig(signingConfigs.releaseConfig)
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable(false)
+        }
+    }
+    productFlavors {
+        dev {
+            dimension 'mode'
+            applicationIdSuffix '.dev'
+            versionNameSuffix '_dev'
+            signingConfig signingConfigs.releaseConfig
+        }
+        prod {
+            dimension 'mode'
+            signingConfig signingConfigs.releaseConfig
+        }
+    }
+
+
+    // Furnish output name
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
+            def projectName = "Todo_Compose"
+            def separatorUnderscore = "_"
+            def versionName = variant.versionName
+            def flavorName = variant.baseName.split("-")[0]
+            def buildType = variant.buildType.name
+            def apkName = projectName + separatorUnderscore + versionName
+            System.out.println("outputs>>versionName is: " + versionName)
+            System.out.println("outputs>>flavorName is: " + flavorName)
+            System.out.println("outputs>>buildType is: " + buildType)
+            System.out.println("outputs>>apkName is: " + apkName)
+            outputFileName = apkName + ".apk"
+            System.out.println("outputs>>outputFileName is: " + outputFileName)
         }
     }
     compileOptions {
@@ -48,33 +96,34 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+    flavorDimensions 'mode'
 }
 
 dependencies {
 
-    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.0')
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
     implementation 'androidx.activity:activity-compose:1.7.2'
-    implementation platform('androidx.compose:compose-bom:2023.06.01')
+    implementation platform('androidx.compose:compose-bom:2023.09.00')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.material3:material3-window-size-class'
-    implementation 'androidx.navigation:navigation-compose:2.6.0'
-    implementation 'androidx.core:core-ktx:1.10.1'
-    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.navigation:navigation-compose:2.7.2'
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.core:core-ktx:1.12.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation platform('androidx.compose:compose-bom:2023.06.01')
+    androidTestImplementation platform('androidx.compose:compose-bom:2023.09.00')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
     // ViewModel and LiveData
-    def lifecycle_version = "2.6.1"
+    def lifecycle_version = '2.6.2'
     // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
     // ViewModel utilities for Compose
