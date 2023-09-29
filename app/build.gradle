@@ -26,7 +26,7 @@ android {
         releaseConfig {
             keyAlias 'todo'
             keyPassword 'todosignkey'
-            storeFile file('../keystore/todosignkey.jks')
+            storeFile file('../signkey/todosignkey.jks')
             storePassword 'todosignkey'
         }
     }
@@ -49,11 +49,9 @@ android {
             dimension 'mode'
             applicationIdSuffix '.dev'
             versionNameSuffix '_dev'
-            signingConfig signingConfigs.releaseConfig
         }
         prod {
             dimension 'mode'
-            signingConfig signingConfigs.releaseConfig
         }
     }
 
