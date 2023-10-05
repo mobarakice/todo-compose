@@ -47,6 +47,12 @@ pipeline {
             }
         }
 
+        stage("Upload aab to playstore"){
+             steps {
+                 androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'bjitApkAutoUpload', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
+             }
+        }
+
     }
     post {
         success {
