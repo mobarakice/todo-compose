@@ -1,12 +1,16 @@
 pipeline {
     agent any // You can specify a specific agent label if needed
 
-    // environment {
-    //     // Define environment variables if needed
-    //     ANDROID_HOME = '/home/mobarak/Android/Sdk'
-    //     GRADLE_HOME = '/home/mobarak/Android/gradle_home'
-    //     PATH = "$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$GRADLE_HOME/bin:$PATH"
-    // }
+    environment {
+        // Define environment variables if needed
+        //     ANDROID_HOME = '/home/mobarak/Android/Sdk'
+        //     GRADLE_HOME = '/home/mobarak/Android/gradle_home'
+        //     PATH = "$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$GRADLE_HOME/bin:$PATH"
+            // Set environment variables, including the path to the JSON key file
+            GOOGLE_PLAY_JSON_KEY = credentials('bjitApkAutoUpload')
+            APK_FILE = 'app/build/outputs/apk/release/app-release.apk' // Path to your APK or AAB file
+            TRACK_NAME = 'production' // Change to your desired release track (e.g., alpha, beta, production)
+    }
 
     stages {
         stage('Checkout') {
@@ -43,6 +47,11 @@ pipeline {
             }
         }
 
+        stage("Upload aab to playstore"){
+            steps {
+               androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'bjitApkAutoUpload', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
+            }
+        }
     }
     post {
         success {

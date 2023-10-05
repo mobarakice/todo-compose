@@ -9,11 +9,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.todocompose"
+        applicationId "com.bjitgroup.todo"
         minSdk 26
         targetSdk 34
-        versionCode 104
-        versionName "1.0.4"
+        versionCode 14
+        versionName "1.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -29,6 +29,12 @@ android {
             storeFile file('../signkey/todosignkey.jks')
             storePassword 'todosignkey'
         }
+        releaseConfig2 {
+            keyAlias 'bjit'
+            keyPassword 'bjit@2023'
+            storeFile file('../keystore/todosignkey.jks')
+            storePassword 'bjit@2023'
+        }
     }
     buildTypes {
         debug {
@@ -39,7 +45,7 @@ android {
         }
         release {
             minifyEnabled(true)
-            signingConfig(signingConfigs.releaseConfig)
+            signingConfig(signingConfigs.releaseConfig2)
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             debuggable(false)
         }
