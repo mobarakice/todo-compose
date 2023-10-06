@@ -17,7 +17,8 @@ pipeline {
             steps {
                 // Check out your project's source code from your version control system
                 // For example, if using Git:
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'bdbfdd61-6d86-4e39-a392-342e6217d2a1', url: 'https://github.com/mobarakice/todo-compose.git']]])
+                //checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'bdbfdd61-6d86-4e39-a392-342e6217d2a1', url: 'https://github.com/mobarakice/todo-compose.git']]])
+                checkout scm
             }
         }
 
@@ -47,11 +48,11 @@ pipeline {
             }
         }
 
-        stage("Upload aab to playstore"){
-             steps {
-                 androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'bjitApkAutoUpload', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
-             }
-        }
+//         stage("Upload aab to playstore"){
+//              steps {
+//                  androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'bjitApkAutoUpload', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
+//              }
+//         }
 
     }
     post {
