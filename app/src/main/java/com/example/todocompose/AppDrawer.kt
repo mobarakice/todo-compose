@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ fun AppDrawer(
     currentRoute: String,
     navigateToTask: () -> Unit,
     navigateToStatistics: () -> Unit,
+    navigateToMessage: () -> Unit,
     closeDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -37,14 +39,30 @@ fun AppDrawer(
             label = { Text(stringResource(id = R.string.task_list)) },
             icon = { Icon(Icons.Filled.List, null) },
             selected = currentRoute == TodoDestinations.TASKS_ROUTE,
-            onClick = { navigateToTask(); closeDrawer() },
+            onClick = {
+                navigateToTask()
+                closeDrawer()
+            },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
         NavigationDrawerItem(
             label = { Text(stringResource(id = R.string.statistics)) },
             icon = { Icon(painterResource(id = R.drawable.ic_statistics), null) },
             selected = currentRoute == TodoDestinations.STATISTICS_ROUTE,
-            onClick = { navigateToStatistics(); closeDrawer() },
+            onClick = {
+                navigateToStatistics()
+                closeDrawer()
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text(stringResource(id = R.string.message_title)) },
+            icon = { Icon(Icons.Filled.Email, contentDescription = "") },
+            selected = currentRoute == TodoDestinations.MESSAGE_ROUTE,
+            onClick = {
+                navigateToMessage()
+                closeDrawer()
+            },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
     }
@@ -59,7 +77,6 @@ private fun TodoLogo(modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.width(8.dp))
-        Text(stringResource(id = R.string.app_name))
     }
 }
 
@@ -72,6 +89,7 @@ fun PreviewAppDrawer() {
             currentRoute = TodoDestinations.TASKS_ROUTE,
             navigateToTask = {},
             navigateToStatistics = {},
+            navigateToMessage = {},
             closeDrawer = { }
         )
     }

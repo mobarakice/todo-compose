@@ -9,7 +9,7 @@ import com.example.todocompose.data.db.entity.Task
  * The Room database that contains the task table
  * @author mobarak
  */
-@Database(entities = [Task::class], version = 2)
+@Database(entities = [Task::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
 }

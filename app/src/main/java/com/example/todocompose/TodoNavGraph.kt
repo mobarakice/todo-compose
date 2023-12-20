@@ -18,6 +18,8 @@ import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.ui.addedittask.AddEditTaskScreen
 import com.example.todocompose.ui.addedittask.AddEditTaskViewModel
+import com.example.todocompose.ui.gemini.MessageScreen
+import com.example.todocompose.ui.gemini.MessageViewModel
 import com.example.todocompose.ui.statistics.StatisticsScreen
 import com.example.todocompose.ui.statistics.StatisticsViewModel
 import com.example.todocompose.ui.taskdetail.TaskDetailScreen
@@ -32,7 +34,7 @@ fun TodoNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     openDrawer: () -> Unit,
-    startDestination: String = TodoDestinations.TASKS_ROUTE,
+    startDestination: String = TodoDestinations.MESSAGE_ROUTE,
     navActions: TodoNavigationActions = remember(navController) {
         TodoNavigationActions(navController)
     }
@@ -72,6 +74,15 @@ fun TodoNavGraph(
                 )
             )
             StatisticsScreen(openDrawer = openDrawer, viewModel = statisticsViewModel)
+        }
+        composable(TodoDestinations.MESSAGE_ROUTE) {
+            val messageViewModel: MessageViewModel = viewModel(
+                factory = MessageViewModel.provideFactory(
+                    repository = repository,
+                    owner = LocalSavedStateRegistryOwner.current
+                )
+            )
+            MessageScreen(openDrawer = openDrawer, viewModel = messageViewModel)
         }
         composable(
             TodoDestinations.ADD_EDIT_TASK_ROUTE,

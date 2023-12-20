@@ -6,6 +6,7 @@ import com.example.todocompose.TodoDestinationsArgs.TASK_ID_ARG
 import com.example.todocompose.TodoDestinationsArgs.TITLE_ARG
 import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
 import com.example.todocompose.TodoScreens.ADD_EDIT_TASK_SCREEN
+import com.example.todocompose.TodoScreens.MESSAGE_SCREEN
 import com.example.todocompose.TodoScreens.STATISTICS_SCREEN
 import com.example.todocompose.TodoScreens.TASKS_SCREEN
 import com.example.todocompose.TodoScreens.TASK_DETAIL_SCREEN
@@ -16,6 +17,7 @@ import com.example.todocompose.TodoScreens.TASK_DETAIL_SCREEN
 private object TodoScreens {
     const val TASKS_SCREEN = "tasks"
     const val STATISTICS_SCREEN = "statistics"
+    const val MESSAGE_SCREEN = "message"
     const val TASK_DETAIL_SCREEN = "task"
     const val ADD_EDIT_TASK_SCREEN = "addEditTask"
 }
@@ -35,6 +37,7 @@ object TodoDestinationsArgs {
 object TodoDestinations {
     const val TASKS_ROUTE = "$TASKS_SCREEN?$USER_MESSAGE_ARG={$USER_MESSAGE_ARG}"
     const val STATISTICS_ROUTE = STATISTICS_SCREEN
+    const val MESSAGE_ROUTE = MESSAGE_SCREEN
     const val TASK_DETAIL_ROUTE = "$TASK_DETAIL_SCREEN/{$TASK_ID_ARG}"
     const val ADD_EDIT_TASK_ROUTE = "$ADD_EDIT_TASK_SCREEN/{$TITLE_ARG}?$TASK_ID_ARG={$TASK_ID_ARG}"
 }
@@ -62,6 +65,22 @@ class TodoNavigationActions(private val navController: NavHostController) {
 
     fun navigateToStatistics() {
         navController.navigate(TodoDestinations.STATISTICS_ROUTE) {
+            // Pop up to the start destination of the graph to
+            // avoid building up a large stack of destinations
+            // on the back stack as users select items
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            // Avoid multiple copies of the same destination when
+            // reselecting the same item
+            launchSingleTop = true
+            // Restore state when reselecting a previously selected item
+            restoreState = true
+        }
+    }
+
+    fun navigateToMessage() {
+        navController.navigate(TodoDestinations.MESSAGE_ROUTE) {
             // Pop up to the start destination of the graph to
             // avoid building up a large stack of destinations
             // on the back stack as users select items

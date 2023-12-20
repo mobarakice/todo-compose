@@ -1,6 +1,7 @@
 package com.example.todocompose.data
 
 import com.example.todocompose.data.db.AppDatabase
+import com.example.todocompose.data.db.TaskRepository
 import com.example.todocompose.data.db.TaskRepositoryImpl
 
 /**

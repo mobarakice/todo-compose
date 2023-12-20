@@ -47,6 +47,7 @@ fun TodoApp(
                     )
                 },
                 navigateToStatistics = { navigationActions.navigateToStatistics() },
+                navigateToMessage = { navigationActions.navigateToMessage() },
                 closeDrawer = { coroutineScope.launch { sizeAwareDrawerState.close() } }
             )
         },

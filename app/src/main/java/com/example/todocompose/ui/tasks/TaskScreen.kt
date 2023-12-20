@@ -59,7 +59,6 @@ import com.example.todocompose.utils.LoadingContent
 import com.mobarak.todo.ui.tasks.FilterType
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskScreen(
     @StringRes userMessage: Int,
