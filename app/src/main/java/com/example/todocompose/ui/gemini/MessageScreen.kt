@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,9 +35,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,9 +44,54 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
+import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.ui.theme.Typography
 
+@Composable
+fun MessageScreen(
+    openDrawer: () -> Unit,
+    viewModel: MessageViewModel,
+    snackBarHostState: SnackbarHostState = SnackbarHostState()
+) {
+    Scaffold(
+        topBar = {
+            MessageTopAppBar(openDrawer)
+        }
+    ) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        Column(
+            verticalArrangement = Arrangement.Bottom,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(it),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Take remaining space equally
+            ) {
+                val msg = uiState.messages
+                MessageItem(messages = msg)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp)
+                    .height(56.dp)
+                    .fillMaxWidth() // Color for child b
+            ) {
+                MessageInputBox(
+                    uiState.userMessage,
+                    viewModel::updateMessage,
+                    viewModel::sendNewMessage
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,49 +120,10 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
 }
 
 @Composable
-fun MessageScreen(
-    openDrawer: () -> Unit,
-    viewModel: MessageViewModel? = null,
-    snackBarHostState: SnackbarHostState = SnackbarHostState()
-) {
-    Scaffold(
-        topBar = {
-            MessageTopAppBar(openDrawer)
-        }
-    ) {
-        Column(
-            verticalArrangement = Arrangement.Bottom,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // Take remaining space equally
-            ) {
-                val msg = getDummyData()
-                MessageItem(messages = msg)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp)
-                    .height(56.dp)
-                    .fillMaxWidth() // Color for child b
-            ) {
-                MessageInputBox(message = "")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
 fun MessageInputBox(
-    modifier: Modifier = Modifier.fillMaxSize(),
     message: String,
-    onMessageChanged: (String) -> Unit = {}
+    onMessageChanged: (String) -> Unit,
+    onSend: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -148,13 +152,11 @@ fun MessageInputBox(
                 unfocusedIndicatorColor = Color.Transparent,
                 cursorColor = Color.White
             )
-            var text by remember { mutableStateOf("") }
+            //var text by remember { mutableStateOf("") }
             Icon(painterResource(id = R.drawable.tag_faces_black_24dp_1), null, tint = Color.White)
             TextField(
-                value = text,
-                onValueChange = {
-                    text = it
-                },
+                value = message,
+                onValueChange = onMessageChanged,
                 placeholder = {
                     Text(
                         text = stringResource(id = R.string.ask_your_question_here),
@@ -175,12 +177,12 @@ fun MessageInputBox(
                     shape = CircleShape
                 )
                 .clickable {
-
+                    onSend()
                 },
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_microphone),
+                Icons.Rounded.Send,
                 null, tint = Color.White
             )
         }
@@ -191,7 +193,7 @@ fun MessageInputBox(
 fun MessageItem(messages: List<Message>) {
     LazyColumn {
         items(messages) { message ->
-            if (message.id == 1) {
+            if (MessageType.RECEIVE.equals(message.type)) {
                 MessageReceiveItem(item = message)
             } else {
                 MessageSendItem(item = message)
@@ -201,8 +203,8 @@ fun MessageItem(messages: List<Message>) {
 }
 
 fun getDummyData() = listOf(
-    Message("Hello", 5),
-    Message("Hello, how can I help you?", 1)
+    Message("Hello", MessageType.SEND),
+    Message("Hello, how can I help you?", MessageType.RECEIVE)
 )
 
 @Composable
@@ -250,11 +252,11 @@ fun CustomText(message: String) {
     }
 }
 
-@Preview
-@Composable
-fun PreScreen() {
-    MessageScreen(openDrawer = { /*TODO*/ }, viewModel = null)
-}
+//@Preview
+//@Composable
+//fun PreScreen() {
+//    MessageScreen(openDrawer = { /*TODO*/ }, viewModel = null)
+//}
 
 @Preview
 @Composable
@@ -266,7 +268,7 @@ fun PreTopBar() {
 @Composable
 fun PreMB() {
     val m = stringResource(R.string.ask_your_question_here)
-    MessageInputBox(message = m)
+    MessageInputBox(message = m, {}, {})
 }
 
 @Preview
@@ -279,13 +281,11 @@ fun PreviewMessageItem() {
 @Preview
 @Composable
 fun PreviewMessageReceiveItem() {
-    MessageReceiveItem(item = Message("Hello, how can I help you?", 2))
+    MessageReceiveItem(Message("Hello, how can I help you?", MessageType.RECEIVE))
 }
 
 @Preview
 @Composable
 fun PreviewMessageSendItem() {
-    MessageSendItem(item = Message("Hello", 1))
+    MessageSendItem(Message("Hello", MessageType.SEND))
 }
-
-data class Message(val message: String, val id: Int)

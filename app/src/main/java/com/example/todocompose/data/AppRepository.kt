@@ -1,5 +1,6 @@
 package com.example.todocompose.data
 
+import com.example.todocompose.data.db.ChatRepository
 import com.example.todocompose.data.db.TaskRepository
 
 /**
@@ -9,4 +10,5 @@ import com.example.todocompose.data.db.TaskRepository
  */
 interface AppRepository {
     fun getTaskRepository(): TaskRepository
+    fun getChatRepository(): ChatRepository
 }

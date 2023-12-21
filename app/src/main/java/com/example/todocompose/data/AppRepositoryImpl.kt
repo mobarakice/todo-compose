@@ -1,7 +1,7 @@
 package com.example.todocompose.data
 
 import com.example.todocompose.data.db.AppDatabase
-import com.example.todocompose.data.db.TaskRepository
+import com.example.todocompose.data.db.ChatRepositoryImpl
 import com.example.todocompose.data.db.TaskRepositoryImpl
 
 /**
@@ -10,5 +10,6 @@ import com.example.todocompose.data.db.TaskRepositoryImpl
  * @author mobarak
  */
 class AppRepositoryImpl(private val db: AppDatabase) : AppRepository {
-    override fun getTaskRepository() = TaskRepositoryImpl(db = db)
+    override fun getTaskRepository() = TaskRepositoryImpl(db)
+    override fun getChatRepository() = ChatRepositoryImpl(db)
 }

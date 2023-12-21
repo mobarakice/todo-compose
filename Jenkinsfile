@@ -7,7 +7,7 @@ pipeline {
 //         //     GRADLE_HOME = '/home/mobarak/Android/gradle_home'
 //         //     PATH = "$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$GRADLE_HOME/bin:$PATH"
 //             // Set environment variables, including the path to the JSON key file
-//             GOOGLE_PLAY_JSON_KEY = credentials('bjitApkAutoUpload')
+//             GOOGLE_PLAY_JSON_KEY = credentials('your googleCredentials id')
 //             APK_FILE = 'app/build/outputs/apk/release/app-release.apk' // Path to your APK or AAB file
 //             TRACK_NAME = 'production' // Change to your desired release track (e.g., alpha, beta, production)
 //     }
@@ -50,7 +50,7 @@ pipeline {
 
 //         stage("Upload aab to playstore"){
 //              steps {
-//                  androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'bjitApkAutoUpload', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
+//                  androidApkUpload filesPattern: '**/build/outputs/bundle/prodRelease/**/*.aab', googleCredentialsId: 'your googleCredentials Id', releaseName: 'Jenkins_test_release', rolloutPercentage: '100', trackName: 'internal'
 //              }
 //         }
 

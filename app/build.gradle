@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -9,7 +10,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.bjitgroup.todo"
+        applicationId "com.example.todocompose"
         minSdk 26
         targetSdk 34
         versionCode 14
@@ -29,12 +30,6 @@ android {
             storeFile file('../signkey/todosignkey.jks')
             storePassword 'todosignkey'
         }
-        releaseConfig2 {
-            keyAlias 'bjit'
-            keyPassword 'bjit@2023'
-            storeFile file('../keystore/todosignkey.jks')
-            storePassword 'bjit@2023'
-        }
     }
     buildTypes {
         debug {
@@ -45,7 +40,7 @@ android {
         }
         release {
             minifyEnabled(true)
-            signingConfig(signingConfigs.releaseConfig2)
+            signingConfig(signingConfigs.releaseConfig)
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             debuggable(false)
         }
@@ -147,4 +142,7 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
     // To use Kotlin Symbol Processing (KSP)
     ksp "androidx.room:room-compiler:$room_version"
+
+    // In Android Studio, add the following dependency to your build.gradle.kts file:
+    implementation("com.google.ai.client.generativeai:generativeai:0.1.1")
 }
