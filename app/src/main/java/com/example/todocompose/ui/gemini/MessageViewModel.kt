@@ -7,13 +7,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
+import com.example.todocompose.R
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.data.db.entity.ChatMessage
 import com.example.todocompose.utils.Result
 import com.example.todocompose.utils.WhileUiSubscribed
 import com.example.todocompose.utils.toMessages
-import com.google.ai.client.generativeai.BuildConfig
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.BlockThreshold
 import com.google.ai.client.generativeai.type.HarmCategory
@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val isLoading: Boolean = false,
-    val userMessage: String = ""
+    val userMessage: String = "",
+    val errorMessage: Int? = null
 )
 
 class MessageViewModel(
@@ -41,6 +42,7 @@ class MessageViewModel(
 ) : ViewModel() {
 
     private val _userMessage: MutableStateFlow<String> = MutableStateFlow("")
+    private val _errorMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
 
     private val _isLoading = MutableStateFlow(false)
 
@@ -50,28 +52,37 @@ class MessageViewModel(
             .map { Result.Success(it.toMessages()) }
 
     val uiState: StateFlow<ChatUiState> = combine(
-        _messages, _isLoading, _userMessage
-    ) { messages, isLoading, userMessage ->
-        ChatUiState(
-            messages.data, isLoading, userMessage
-        )
+        _messages,
+        _isLoading,
+        _userMessage,
+        _errorMessage
+    ) { messages, isLoading, userMessage, errorMessage ->
+        ChatUiState(messages.data, isLoading, userMessage, errorMessage)
     }.stateIn(
         scope = viewModelScope,
         started = WhileUiSubscribed,
         initialValue = ChatUiState(isLoading = true)
     )
 
-    fun updateMessage(newMessage: String) {
-        _userMessage.update { message -> newMessage }
+//    val uiState: StateFlow<ChatUiState>
+
+    fun updateUserMessage(newMessage: String) {
+        _userMessage.value = newMessage
+    }
+
+    fun updateErrorMessage(newMessage: Int?) {
+        _errorMessage.value = newMessage
     }
 
     fun sendNewMessage() {
-        if (uiState.value.userMessage.isEmpty()) {
-            return
+        if (_userMessage.value.isEmpty()) {
+            updateErrorMessage(R.string.ask_your_question_here)
+        }else {
+            val message = _userMessage.value
+            updateUserMessage("")
+            createNewChatMessage(message, MessageType.SEND)
+            callGeminiPro(message)
         }
-
-        createNewChatMessage(_userMessage.value, MessageType.SEND)
-        callGeminiPro(_userMessage.value)
     }
 
     private fun createNewChatMessage(message: String, messageType: MessageType) {
@@ -81,7 +92,6 @@ class MessageViewModel(
             )
         }
     }
-
     private fun callGeminiPro(message: String) {
         viewModelScope.launch {
             try {
@@ -112,17 +122,11 @@ class MessageViewModel(
 
                 val chatHistory = listOf(
                     content("user") {
-                        text("a = 5, b = 10")
+                        text("Fruits")
                     },
                     content("model") {
-                        text("15")
-                    },
-                    content("user") {
-                        text("a = 7, b = 9")
-                    },
-                    content("model") {
-                        text("16")
-                    },
+                        text("Apple, Mango, Orange")
+                    }
                 )
 
                 val chat = model.startChat(chatHistory)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -34,7 +37,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.ui.theme.Typography
+import kotlinx.coroutines.launch
 
 @Composable
 fun MessageScreen(
@@ -55,41 +62,60 @@ fun MessageScreen(
     viewModel: MessageViewModel,
     snackBarHostState: SnackbarHostState = SnackbarHostState()
 ) {
+    val scope = rememberCoroutineScope()
+    val snackbarState = remember { snackBarHostState }
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarState)
+        },
         topBar = {
             MessageTopAppBar(openDrawer)
         }
-    ) {
+    ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        Column(
-            verticalArrangement = Arrangement.Bottom,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // Take remaining space equally
-            ) {
-                val msg = uiState.messages
-                MessageItem(messages = msg)
+        ChatContent(viewModel, uiState, paddingValues)
+
+        // Check for user messages to display on the screen
+        uiState.errorMessage?.let { errorMessage ->
+            val snackbarText = stringResource(errorMessage)
+            viewModel.updateErrorMessage(null)
+            scope.launch {
+                snackbarState.showSnackbar(snackbarText)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp)
-                    .height(56.dp)
-                    .fillMaxWidth() // Color for child b
-            ) {
-                MessageInputBox(
-                    uiState.userMessage,
-                    viewModel::updateMessage,
-                    viewModel::sendNewMessage
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+fun ChatContent(viewModel: MessageViewModel, uiState: ChatUiState, paddingValues: PaddingValues) {
+    Column(
+        verticalArrangement = Arrangement.Bottom,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f) // Take remaining space equally
+        ) {
+            val msg = uiState.messages
+            MessageItem(messages = msg)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp)
+                .height(56.dp)
+                .fillMaxWidth() // Color for child b
+        ) {
+            MessageInputBox(
+                uiState.userMessage,
+                viewModel::updateUserMessage,
+                viewModel::sendNewMessage
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -191,12 +217,24 @@ fun MessageInputBox(
 
 @Composable
 fun MessageItem(messages: List<Message>) {
-    LazyColumn {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    LazyColumn(state = listState) {
         items(messages) { message ->
-            if (MessageType.RECEIVE.equals(message.type)) {
+            if (MessageType.RECEIVE == message.type) {
                 MessageReceiveItem(item = message)
             } else {
                 MessageSendItem(item = message)
+            }
+        }
+        scope.launch {
+            listState.layoutInfo.let { layoutInfo ->
+                val index = if (messages.isNotEmpty()) {
+                    messages.size - 1
+                }else{
+                    0
+                }
+                listState.animateScrollToItem(index)
             }
         }
     }

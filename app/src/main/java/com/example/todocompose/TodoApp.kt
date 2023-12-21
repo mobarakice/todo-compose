@@ -68,7 +68,6 @@ fun TodoApp(
 /**
  * Determine the drawer state to pass to the modal drawer.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun rememberSizeAwareDrawerState(isExpandedScreen: Boolean): DrawerState {
     val drawerState = rememberDrawerState(DrawerValue.Closed)

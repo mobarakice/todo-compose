@@ -50,9 +50,11 @@ android {
             dimension 'mode'
             applicationIdSuffix '.dev'
             versionNameSuffix '_dev'
+            buildConfigField("String","API_KEY",properties["apiKey"] as String?:"")
         }
         prod {
             dimension 'mode'
+            buildConfigField("String","API_KEY",properties["apiKey"] as String?:"")
         }
     }
 
@@ -86,6 +88,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.7'
