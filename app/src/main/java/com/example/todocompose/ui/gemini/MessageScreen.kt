@@ -23,13 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -37,7 +35,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.ui.theme.Typography
+import com.example.todocompose.utils.CustomSnackbar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -66,7 +64,7 @@ fun MessageScreen(
     val snackbarState = remember { snackBarHostState }
     Scaffold(
         snackbarHost = {
-            SnackbarHost(hostState = snackbarState)
+            CustomSnackbar(snackbarState = snackbarState)
         },
         topBar = {
             MessageTopAppBar(openDrawer)
@@ -207,9 +205,11 @@ fun MessageInputBox(
                 },
             contentAlignment = Alignment.Center
         ) {
+            val resId = if (message.isEmpty()) R.drawable.ic_mic else R.drawable.ic_send
             Icon(
-                Icons.Rounded.Send,
-                null, tint = Color.White
+                painterResource(resId),
+                null,
+                tint = Color.White
             )
         }
     }
@@ -231,7 +231,7 @@ fun MessageItem(messages: List<Message>) {
             listState.layoutInfo.let { layoutInfo ->
                 val index = if (messages.isNotEmpty()) {
                     messages.size - 1
-                }else{
+                } else {
                     0
                 }
                 listState.animateScrollToItem(index)

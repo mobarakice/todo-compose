@@ -7,11 +7,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
+import com.example.todocompose.BuildConfig
 import com.example.todocompose.R
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.data.db.entity.ChatMessage
-import com.example.todocompose.utils.Result
 import com.example.todocompose.utils.WhileUiSubscribed
 import com.example.todocompose.utils.toMessages
 import com.google.ai.client.generativeai.GenerativeModel
@@ -21,13 +21,14 @@ import com.google.ai.client.generativeai.type.SafetySetting
 import com.google.ai.client.generativeai.type.asTextOrNull
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
@@ -41,6 +42,9 @@ class MessageViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    private val _savedUserLastInput = savedStateHandle.getStateFlow(
+        USER_LAST_INPUT_STATE_KEY, ""
+    )
     private val _userMessage: MutableStateFlow<String> = MutableStateFlow("")
     private val _errorMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
 
@@ -49,15 +53,17 @@ class MessageViewModel(
     private val _messages =
         repository.getChatRepository()
             .observeChatMessages()
-            .map { Result.Success(it.toMessages()) }
+            .map { it.toMessages() }
 
     val uiState: StateFlow<ChatUiState> = combine(
         _messages,
         _isLoading,
         _userMessage,
+        _savedUserLastInput,
         _errorMessage
-    ) { messages, isLoading, userMessage, errorMessage ->
-        ChatUiState(messages.data, isLoading, userMessage, errorMessage)
+    ) { messages, isLoading, userMessage, savedUserLastInput, errorMessage ->
+        val userMsg = if (userMessage.isEmpty()) userMessage else savedUserLastInput
+        ChatUiState(messages, isLoading, userMsg, errorMessage)
     }.stateIn(
         scope = viewModelScope,
         started = WhileUiSubscribed,
@@ -68,6 +74,7 @@ class MessageViewModel(
 
     fun updateUserMessage(newMessage: String) {
         _userMessage.value = newMessage
+        savedStateHandle[USER_LAST_INPUT_STATE_KEY] = newMessage
     }
 
     fun updateErrorMessage(newMessage: Int?) {
@@ -75,31 +82,36 @@ class MessageViewModel(
     }
 
     fun sendNewMessage() {
-        if (_userMessage.value.isEmpty()) {
-            updateErrorMessage(R.string.ask_your_question_here)
-        }else {
-            val message = _userMessage.value
-            updateUserMessage("")
-            createNewChatMessage(message, MessageType.SEND)
-            callGeminiPro(message)
+        viewModelScope.launch {
+
+            if (_userMessage.value.isEmpty()) {
+                updateErrorMessage(R.string.ask_your_question_here)
+            } else {
+                val message = _userMessage.value
+                updateUserMessage("")
+                createNewChatMessage(message, MessageType.SEND)
+                callGeminiPro(message)
+            }
         }
     }
 
-    private fun createNewChatMessage(message: String, messageType: MessageType) {
-        viewModelScope.launch {
-            repository.getChatRepository().insertChatMessage(
-                ChatMessage(message = message, messageType = messageType)
-            )
+    private suspend fun createNewChatMessage(message: String, messageType: MessageType) {
+        withContext(Dispatchers.IO) {
+            repository.getChatRepository()
+                .insertChatMessage(
+                    ChatMessage(message = message, messageType = messageType)
+                )
         }
     }
-    private fun callGeminiPro(message: String) {
-        viewModelScope.launch {
+
+    private suspend fun callGeminiPro(message: String) {
+        withContext(Dispatchers.IO) {
             try {
                 val model = GenerativeModel(
                     "gemini-pro",
                     // Retrieve API key as an environmental variable defined in a Build Configuration
                     // see https://github.com/google/secrets-gradle-plugin for further instructions
-                    System.getenv("apiKey")?:"",
+                    BuildConfig.apiKey,
                     generationConfig = generationConfig {
                         temperature = 0.9f
                         topK = 1
@@ -164,3 +176,6 @@ class MessageViewModel(
             }
     }
 }
+
+// Used to save USER last input in SavedStateHandle.
+const val USER_LAST_INPUT_STATE_KEY = "user-last-input"
