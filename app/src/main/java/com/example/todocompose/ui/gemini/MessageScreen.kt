@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,8 +53,14 @@ import com.example.todocompose.R
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.ui.theme.Typography
 import com.example.todocompose.utils.CustomSnackbar
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MessageScreen(
     openDrawer: () -> Unit,
@@ -72,6 +79,7 @@ fun MessageScreen(
     ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ChatContent(viewModel, uiState, paddingValues)
+        //MicPermission(micPermissionState)
 
         // Check for user messages to display on the screen
         uiState.errorMessage?.let { errorMessage ->
@@ -143,12 +151,14 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
     )
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MessageInputBox(
     message: String,
     onMessageChanged: (String) -> Unit,
     onSend: () -> Unit
 ) {
+    val micPermissionState = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO)
     Row(verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
@@ -201,7 +211,11 @@ fun MessageInputBox(
                     shape = CircleShape
                 )
                 .clickable {
-                    onSend()
+                    if(micPermissionState.status.isGranted) {
+                        onSend()
+                    }else{
+                        micPermissionState.launchPermissionRequest()
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -287,6 +301,25 @@ fun CustomText(message: String) {
             )
     ) {
         Text(text = message, modifier = Modifier.padding(8.dp))
+    }
+}
+
+@Composable
+@OptIn(ExperimentalPermissionsApi::class)
+fun MicPermission(permissionState: PermissionState) {
+    if (!permissionState.status.isGranted) {
+        Column {
+            val textToShow = if (permissionState.status.shouldShowRationale) {
+                "The camera is important for this app. Please grant the permission."
+            } else {
+                "Camera not available"
+            }
+            Text(textToShow)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = { permissionState.launchPermissionRequest() }) {
+                Text("Request permission")
+            }
+        }
     }
 }
 

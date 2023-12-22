@@ -145,4 +145,5 @@ dependencies {
 
     // In Android Studio, add the following dependency to your build.gradle.kts file:
     implementation("com.google.ai.client.generativeai:generativeai:0.1.1")
+    implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
 }
