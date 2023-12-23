@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -34,7 +35,8 @@ data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val isLoading: Boolean = false,
     val userMessage: String = "",
-    val errorMessage: Int? = null
+    val errorMessage: Int? = null,
+    val permissionDialog: Pair<Boolean,Int?> = Pair(false,null)
 )
 
 class MessageViewModel(
@@ -45,9 +47,17 @@ class MessageViewModel(
     private val _savedUserLastInput = savedStateHandle.getStateFlow(
         USER_LAST_INPUT_STATE_KEY, ""
     )
-    private val _userMessage: MutableStateFlow<String> = MutableStateFlow("")
+    private val _userInputMessage: MutableStateFlow<String> = MutableStateFlow("")
     private val _errorMessage: MutableStateFlow<Int?> = MutableStateFlow(null)
-
+    private val _combinedStringFlow = combine(
+        _userInputMessage,
+        _savedUserLastInput,
+        _errorMessage
+    ) { userInputMessage, savedLastInput, errorMessage ->
+        val userMsg = savedLastInput.ifEmpty { userInputMessage }
+        Pair(userMsg, errorMessage)
+    }
+    private val _permissionDialog: MutableStateFlow<Pair<Boolean, Int?>> = MutableStateFlow(Pair(false,null))
     private val _isLoading = MutableStateFlow(false)
 
     private val _messages =
@@ -58,12 +68,16 @@ class MessageViewModel(
     val uiState: StateFlow<ChatUiState> = combine(
         _messages,
         _isLoading,
-        _userMessage,
-        _savedUserLastInput,
-        _errorMessage
-    ) { messages, isLoading, userMessage, savedUserLastInput, errorMessage ->
-        val userMsg = if (userMessage.isEmpty()) userMessage else savedUserLastInput
-        ChatUiState(messages, isLoading, userMsg, errorMessage)
+        _combinedStringFlow,
+        _permissionDialog
+    ) { messages, isLoading, combinedStringFlow, permissionDialog ->
+        ChatUiState(
+            messages,
+            isLoading,
+            combinedStringFlow.first,
+            combinedStringFlow.second,
+            permissionDialog
+        )
     }.stateIn(
         scope = viewModelScope,
         started = WhileUiSubscribed,
@@ -73,7 +87,7 @@ class MessageViewModel(
 //    val uiState: StateFlow<ChatUiState>
 
     fun updateUserMessage(newMessage: String) {
-        _userMessage.value = newMessage
+        _userInputMessage.value = newMessage
         savedStateHandle[USER_LAST_INPUT_STATE_KEY] = newMessage
     }
 
@@ -84,10 +98,10 @@ class MessageViewModel(
     fun sendNewMessage() {
         viewModelScope.launch {
 
-            if (_userMessage.value.isEmpty()) {
+            if (_userInputMessage.value.isEmpty()) {
                 updateErrorMessage(R.string.ask_your_question_here)
             } else {
-                val message = _userMessage.value
+                val message = _userInputMessage.value
                 updateUserMessage("")
                 createNewChatMessage(message, MessageType.SEND)
                 callGeminiPro(message)
@@ -153,6 +167,18 @@ class MessageViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "${e.message}")
             }
+        }
+    }
+
+    fun updatePermissionDialogState(isShowDialog: Boolean) {
+        _permissionDialog.update {
+            it.copy(first = isShowDialog)
+        }
+    }
+
+    fun updateDialogText(text: Int) {
+        _permissionDialog.update {
+            it.copy(second = text)
         }
     }
 

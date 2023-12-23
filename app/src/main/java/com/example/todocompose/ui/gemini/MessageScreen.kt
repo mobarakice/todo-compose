@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.ui.theme.Typography
+import com.example.todocompose.utils.CustomAlertDialog
 import com.example.todocompose.utils.CustomSnackbar
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -68,32 +68,65 @@ fun MessageScreen(
     snackBarHostState: SnackbarHostState = SnackbarHostState()
 ) {
     val scope = rememberCoroutineScope()
-    val snackbarState = remember { snackBarHostState }
+    val snackBarState = remember { snackBarHostState }
+    val micPermissionState = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO) {
+        if (it) {
+            viewModel.sendNewMessage()
+        } else {
+            viewModel.updatePermissionDialogState(true)
+        }
+    }
     Scaffold(
         snackbarHost = {
-            CustomSnackbar(snackbarState = snackbarState)
+            CustomSnackbar(snackbarState = snackBarState)
         },
         topBar = {
             MessageTopAppBar(openDrawer)
         }
     ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        ChatContent(viewModel, uiState, paddingValues)
+        ChatContent(viewModel, uiState, paddingValues, micPermissionState)
         //MicPermission(micPermissionState)
 
         // Check for user messages to display on the screen
         uiState.errorMessage?.let { errorMessage ->
-            val snackbarText = stringResource(errorMessage)
+            val snackBarText = stringResource(errorMessage)
             viewModel.updateErrorMessage(null)
             scope.launch {
-                snackbarState.showSnackbar(snackbarText)
+                snackBarState.showSnackbar(snackBarText)
+            }
+        }
+
+        // Check for user messages to display on the screen
+        uiState.permissionDialog.let {
+            if (it.first) {
+                CustomAlertDialog(
+                    onDismissRequest = {
+                        viewModel.updatePermissionDialogState(false)
+                    },
+                    onConfirmation = {
+                        micPermissionState.launchPermissionRequest()
+                        viewModel.updatePermissionDialogState(false)
+                    },
+                    dialogTitle = stringResource(R.string.microphone_permission),
+                    dialogText = it.second?.let { id ->
+                        stringResource(id = id)
+                    } ?: "",
+                    icon = R.drawable.ic_mic
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ChatContent(viewModel: MessageViewModel, uiState: ChatUiState, paddingValues: PaddingValues) {
+fun ChatContent(
+    viewModel: MessageViewModel,
+    uiState: ChatUiState,
+    paddingValues: PaddingValues,
+    micPermissionState: PermissionState
+) {
     Column(
         verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
@@ -117,8 +150,8 @@ fun ChatContent(viewModel: MessageViewModel, uiState: ChatUiState, paddingValues
         ) {
             MessageInputBox(
                 uiState.userMessage,
-                viewModel::updateUserMessage,
-                viewModel::sendNewMessage
+                viewModel,
+                micPermissionState = micPermissionState
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -155,10 +188,9 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
 @Composable
 fun MessageInputBox(
     message: String,
-    onMessageChanged: (String) -> Unit,
-    onSend: () -> Unit
+    viewModel: MessageViewModel,
+    micPermissionState: PermissionState
 ) {
-    val micPermissionState = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO)
     Row(verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
@@ -190,7 +222,7 @@ fun MessageInputBox(
             Icon(painterResource(id = R.drawable.tag_faces_black_24dp_1), null, tint = Color.White)
             TextField(
                 value = message,
-                onValueChange = onMessageChanged,
+                onValueChange = viewModel::updateUserMessage,
                 placeholder = {
                     Text(
                         text = stringResource(id = R.string.ask_your_question_here),
@@ -211,9 +243,12 @@ fun MessageInputBox(
                     shape = CircleShape
                 )
                 .clickable {
-                    if(micPermissionState.status.isGranted) {
-                        onSend()
-                    }else{
+                    if (micPermissionState.status.isGranted) {
+                        viewModel.sendNewMessage()
+                    } else {
+                        if (micPermissionState.status.shouldShowRationale) {
+                            viewModel.updateDialogText(R.string.microphone_permission_explanation)
+                        }
                         micPermissionState.launchPermissionRequest()
                     }
                 },
@@ -242,7 +277,7 @@ fun MessageItem(messages: List<Message>) {
             }
         }
         scope.launch {
-            listState.layoutInfo.let { layoutInfo ->
+            listState.layoutInfo.let {
                 val index = if (messages.isNotEmpty()) {
                     messages.size - 1
                 } else {
@@ -304,25 +339,6 @@ fun CustomText(message: String) {
     }
 }
 
-@Composable
-@OptIn(ExperimentalPermissionsApi::class)
-fun MicPermission(permissionState: PermissionState) {
-    if (!permissionState.status.isGranted) {
-        Column {
-            val textToShow = if (permissionState.status.shouldShowRationale) {
-                "The camera is important for this app. Please grant the permission."
-            } else {
-                "Camera not available"
-            }
-            Text(textToShow)
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { permissionState.launchPermissionRequest() }) {
-                Text("Request permission")
-            }
-        }
-    }
-}
-
 //@Preview
 //@Composable
 //fun PreScreen() {
@@ -333,13 +349,6 @@ fun MicPermission(permissionState: PermissionState) {
 @Composable
 fun PreTopBar() {
     MessageTopAppBar { }
-}
-
-@Preview
-@Composable
-fun PreMB() {
-    val m = stringResource(R.string.ask_your_question_here)
-    MessageInputBox(message = m, {}, {})
 }
 
 @Preview

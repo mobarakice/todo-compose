@@ -59,5 +59,9 @@
     <string name="message_title">Message</string>
     <string name="ask_your_question_here">Ask your question here</string>
     <string name="loading_message_error">Error while loading message history</string>
+    <string name="microphone_permission_explanation">The Microphone permission is required to practice spoken english with AI. Please grant the permission.</string>
+    <string name="microphone_permission">Microphone permission</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
 
 </resources>
