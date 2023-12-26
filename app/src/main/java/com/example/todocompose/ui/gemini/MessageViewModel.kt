@@ -1,6 +1,8 @@
 package com.example.todocompose.ui.gemini
 
+import android.content.Context
 import android.os.Bundle
+import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
@@ -8,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.todocompose.BuildConfig
-import com.example.todocompose.R
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.data.db.entity.ChatMessage
@@ -21,7 +22,10 @@ import com.google.ai.client.generativeai.type.SafetySetting
 import com.google.ai.client.generativeai.type.asTextOrNull
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,10 +40,12 @@ data class ChatUiState(
     val isLoading: Boolean = false,
     val userMessage: String = "",
     val errorMessage: Int? = null,
-    val permissionDialog: Pair<Boolean,Int?> = Pair(false,null)
+    val permissionDialog: Pair<Boolean, Int?> = Pair(false, null)
 )
 
 class MessageViewModel(
+    private val recognitionRepository: SpeechRecognitionRepository,
+    private val ttsRepository: TTSRepository,
     private val repository: AppRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -57,7 +63,8 @@ class MessageViewModel(
         val userMsg = savedLastInput.ifEmpty { userInputMessage }
         Pair(userMsg, errorMessage)
     }
-    private val _permissionDialog: MutableStateFlow<Pair<Boolean, Int?>> = MutableStateFlow(Pair(false,null))
+    private val _permissionDialog: MutableStateFlow<Pair<Boolean, Int?>> =
+        MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
 
     private val _messages =
@@ -95,11 +102,12 @@ class MessageViewModel(
         _errorMessage.value = newMessage
     }
 
-    fun sendNewMessage() {
+    fun sendNewMessage(context: Context) {
         viewModelScope.launch {
 
             if (_userInputMessage.value.isEmpty()) {
-                updateErrorMessage(R.string.ask_your_question_here)
+                //updateErrorMessage(R.string.ask_your_question_here)
+                startListening(context)
             } else {
                 val message = _userInputMessage.value
                 updateUserMessage("")
@@ -164,6 +172,7 @@ class MessageViewModel(
                 Log.i(TAG, "Total: $contentParts")
 
                 createNewChatMessage(text, MessageType.RECEIVE)
+                ttsRepository.speak(text)
             } catch (e: Exception) {
                 Log.e(TAG, "${e.message}")
             }
@@ -187,6 +196,8 @@ class MessageViewModel(
 
         fun provideFactory(
             repository: AppRepository,
+            recognitionRepository: SpeechRecognitionRepository,
+            ttsRepository: TTSRepository,
             owner: SavedStateRegistryOwner,
             defaultArgs: Bundle? = null,
         ): AbstractSavedStateViewModelFactory =
@@ -197,9 +208,44 @@ class MessageViewModel(
                     modelClass: Class<T>,
                     handle: SavedStateHandle
                 ): T {
-                    return MessageViewModel(repository, handle) as T
+                    return MessageViewModel(
+                        recognitionRepository,
+                        ttsRepository,
+                        repository,
+                        handle
+                    ) as T
                 }
             }
+    }
+
+    private val scope = CoroutineScope(Dispatchers.IO + Job())
+
+    private fun startListening(context: Context) {
+//        scope.launch {
+//
+//        }
+        viewModelScope.launch {
+            if (SpeechRecognizer.isRecognitionAvailable(context)) {
+                Log.i(TAG, "SpeechRecognizer is available")
+                recognitionRepository.startListening { result ->
+                    Log.i(TAG, "Text: ${result.text}")
+                    updateUserMessage(result.text)
+                }
+            } else {
+                Log.i(TAG, "SpeechRecognizer is not available")
+            }
+        }
+    }
+
+    fun stopListening() {
+        scope.launch {
+            recognitionRepository.stopListening()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        scope.cancel()
     }
 }
 

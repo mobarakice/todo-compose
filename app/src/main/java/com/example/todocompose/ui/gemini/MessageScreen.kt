@@ -41,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,9 +70,10 @@ fun MessageScreen(
 ) {
     val scope = rememberCoroutineScope()
     val snackBarState = remember { snackBarHostState }
+    val context = LocalContext.current
     val micPermissionState = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO) {
         if (it) {
-            viewModel.sendNewMessage()
+            viewModel.sendNewMessage(context)
         } else {
             viewModel.updatePermissionDialogState(true)
         }
@@ -235,6 +237,7 @@ fun MessageInputBox(
             )
         }
         Spacer(modifier = Modifier.size(8.dp))
+        val context = LocalContext.current
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -244,7 +247,7 @@ fun MessageInputBox(
                 )
                 .clickable {
                     if (micPermissionState.status.isGranted) {
-                        viewModel.sendNewMessage()
+                        viewModel.sendNewMessage(context)
                     } else {
                         if (micPermissionState.status.shouldShowRationale) {
                             viewModel.updateDialogText(R.string.microphone_permission_explanation)

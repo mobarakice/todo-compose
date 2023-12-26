@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -20,6 +21,10 @@ import com.example.todocompose.ui.addedittask.AddEditTaskScreen
 import com.example.todocompose.ui.addedittask.AddEditTaskViewModel
 import com.example.todocompose.ui.gemini.MessageScreen
 import com.example.todocompose.ui.gemini.MessageViewModel
+import com.example.todocompose.ui.gemini.SpeechRecognitionRepository
+import com.example.todocompose.ui.gemini.SpeechRecognitionUseCase
+import com.example.todocompose.ui.gemini.TTSRepository
+import com.example.todocompose.ui.gemini.TextToSpeechEngine
 import com.example.todocompose.ui.statistics.StatisticsScreen
 import com.example.todocompose.ui.statistics.StatisticsViewModel
 import com.example.todocompose.ui.taskdetail.TaskDetailScreen
@@ -60,8 +65,7 @@ fun TodoNavGraph(
                 userMessage = entry.arguments?.getInt(USER_MESSAGE_ARG)!!,
                 onUserMessageDisplayed = { entry.arguments?.putInt(USER_MESSAGE_ARG, 0) },
                 onAddTask = { navActions.navigateToAddEditTask(R.string.add_task, -1) },
-                onTaskClick = {
-                        task -> navActions.navigateToTaskDetail(task.id) },
+                onTaskClick = { task -> navActions.navigateToTaskDetail(task.id) },
                 openDrawer = openDrawer,
                 viewModel = taskViewModel
             )
@@ -76,8 +80,14 @@ fun TodoNavGraph(
             StatisticsScreen(openDrawer = openDrawer, viewModel = statisticsViewModel)
         }
         composable(TodoDestinations.MESSAGE_ROUTE) {
+            val recognitionRepository: SpeechRecognitionRepository =
+                SpeechRecognitionUseCase(LocalContext.current)
+            val ttsRepository: TTSRepository =
+                TextToSpeechEngine(LocalContext.current)
             val messageViewModel: MessageViewModel = viewModel(
                 factory = MessageViewModel.provideFactory(
+                    recognitionRepository = recognitionRepository,
+                    ttsRepository = ttsRepository,
                     repository = repository,
                     owner = LocalSavedStateRegistryOwner.current
                 )
@@ -88,7 +98,7 @@ fun TodoNavGraph(
             TodoDestinations.ADD_EDIT_TASK_ROUTE,
             arguments = listOf(
                 navArgument(TITLE_ARG) { type = NavType.IntType },
-                navArgument(TASK_ID_ARG) { type = NavType.LongType; defaultValue = -1},
+                navArgument(TASK_ID_ARG) { type = NavType.LongType; defaultValue = -1 },
             )
         ) { entry ->
             val taskId = entry.arguments?.getLong(TASK_ID_ARG)
@@ -110,10 +120,12 @@ fun TodoNavGraph(
                 viewModel = addEditViewModel
             )
         }
-        composable(TodoDestinations.TASK_DETAIL_ROUTE,
+        composable(
+            TodoDestinations.TASK_DETAIL_ROUTE,
             arguments = listOf(
-                navArgument(TASK_ID_ARG) { type = NavType.LongType},
-            )) {
+                navArgument(TASK_ID_ARG) { type = NavType.LongType },
+            )
+        ) {
             val taskDetailViewModel: TaskDetailViewModel = viewModel(
                 factory = TaskDetailViewModel.provideFactory(
                     repository = repository,
