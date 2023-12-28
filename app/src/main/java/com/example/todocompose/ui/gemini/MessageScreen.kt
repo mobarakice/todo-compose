@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -184,6 +185,48 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
         windowInsets = TopAppBarDefaults.windowInsets,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+fun SpeakingAndListeningBox() {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+            .padding(start = 16.dp, end = 16.dp)
+            .clickable {}
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .weight(1f)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_mic),
+                contentDescription = null,
+                tint = Color.White
+            )
+            Text(text = "Listening..", color = Color.White)
+        }
+        Spacer(modifier = Modifier.size(8.dp))
+        Icon(
+            Icons.Filled.Close,
+            contentDescription = null,
+            modifier = Modifier
+                .size(24.dp)
+                .clickable {
+
+                },
+            tint = MaterialTheme.colorScheme.inversePrimary
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PreviewSpeakingAndListeningBox() {
+    SpeakingAndListeningBox()
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
