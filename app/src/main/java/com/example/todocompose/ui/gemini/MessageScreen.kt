@@ -1,5 +1,12 @@
 package com.example.todocompose.ui.gemini
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateValue
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -156,7 +164,9 @@ fun ChatContent(
                 viewModel,
                 micPermissionState = micPermissionState
             )
+
         }
+//        SpeakingAndListeningBox()
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -189,13 +199,13 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
 
 @Composable
 fun SpeakingAndListeningBox() {
-    Row(verticalAlignment = Alignment.CenterVertically,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .height(90.dp)
             .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
             .padding(start = 16.dp, end = 16.dp)
-            .clickable {}
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -207,7 +217,10 @@ fun SpeakingAndListeningBox() {
                 contentDescription = null,
                 tint = Color.White
             )
-            Text(text = "Listening..", color = Color.White)
+            AnimateDottedText(
+                text = "Listening",
+                style = TextStyle(color = Color.White)
+            )
         }
         Spacer(modifier = Modifier.size(8.dp))
         Icon(
@@ -415,3 +428,45 @@ fun PreviewMessageReceiveItem() {
 fun PreviewMessageSendItem() {
     MessageSendItem(Message("Hello", MessageType.SEND))
 }
+
+@Composable
+fun AnimateDottedText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = TextStyle.Default,
+    cycleDuration: Int = 1000 // Milliseconds
+) {
+    // Create an infinite transition
+    val transition = rememberInfiniteTransition(label = "Dots Transition")
+
+    // Define the animated value for the number of visible dots
+    val visibleDotsCount = transition.animateValue(
+        initialValue = 0,
+        targetValue = 4,
+        typeConverter = Int.VectorConverter,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = cycleDuration,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Visible Dots Count"
+    )
+
+    Row (verticalAlignment = Alignment.CenterVertically){
+        Text(text = stringResource(R.string.listening), color = Color.White)
+        repeat(visibleDotsCount.value) {
+            Spacer(modifier = Modifier.size(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .align(Alignment.CenterVertically)
+                    .background(color = Color.White, shape = CircleShape)
+            )
+        }
+    }
+
+}
+
+

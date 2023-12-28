@@ -63,5 +63,6 @@
     <string name="microphone_permission">Microphone permission</string>
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
+    <string name="listening">Listening</string>
 
 </resources>
