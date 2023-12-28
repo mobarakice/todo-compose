@@ -43,6 +43,10 @@ data class ChatUiState(
     val permissionDialog: Pair<Boolean, Int?> = Pair(false, null)
 )
 
+sealed interface Prompt
+data class ChatPrompt(val text: String) : Prompt
+data class StructuredPrompt(val text: String) : Prompt
+
 class MessageViewModel(
     private val recognitionRepository: SpeechRecognitionRepository,
     private val ttsRepository: TTSRepository,
@@ -112,7 +116,7 @@ class MessageViewModel(
                 val message = _userInputMessage.value
                 updateUserMessage("")
                 createNewChatMessage(message, MessageType.SEND)
-                callGeminiPro(message)
+                callGeminiPro(StructuredPrompt(message))
             }
         }
     }
@@ -126,7 +130,7 @@ class MessageViewModel(
         }
     }
 
-    private suspend fun callGeminiPro(message: String) {
+    private suspend fun callGeminiPro(prompt: Prompt) {
         withContext(Dispatchers.IO) {
             try {
                 val model = GenerativeModel(
@@ -153,18 +157,7 @@ class MessageViewModel(
                         ),
                     ),
                 )
-
-                val chatHistory = listOf(
-                    content("user") {
-                        text("Fruits")
-                    },
-                    content("model") {
-                        text("Apple, Mango, Orange")
-                    }
-                )
-
-                val chat = model.startChat(chatHistory)
-                val response = chat.sendMessage(message)
+                val response = sendMessage(prompt, model)
                 Log.i(TAG, "Response: $response")
                 val text = response.text ?: ""
                 Log.i(TAG, "Text: $text")
@@ -178,6 +171,67 @@ class MessageViewModel(
             }
         }
     }
+
+    private suspend fun sendMessage(prompt: Prompt, model: GenerativeModel) = when (prompt) {
+        is ChatPrompt -> {
+            model.startChat(getChatPrompt())
+                .sendMessage(prompt.text)
+        }
+
+        is StructuredPrompt -> {
+            model.generateContent(getStructuredPrompt(prompt.text))
+        }
+    }
+
+    private fun getStructuredPrompt(text: String) = content {
+        text("English trainer, refine my advanced English! <div>-Correct & explain my mistakes. </div><div>-Offer advanced alternatives. </div><div>-Output a maximum of 80 words</div>")
+        text("Request: Hello, how are you?")
+        text("Response: Your sentence is grammatically correct! However, depending on the context and desired formality, here are some advanced alternatives:\n\"Good morning/afternoon/evening, I hope you are well.\"\n\"Great to see you! How's it going?\"\n\"Hello! Are you tackling any exciting projects nowadays?\"")
+        text("Request: What are you done?")
+        text("Response: \"What are you done?\" is grammatically incorrect. The correct way to ask would be \"What have you done?\" or \"What are you doing?\" depending on the context and time frame.\nAlternatives in advanced English:\n-\"What have you accomplished recently?\" \n-\"What have you been up to lately?\" \n-\"What progress have you made on [project/task]?\" (Tailored to a specific context).")
+        text("Request: $text")
+        text("Response: ")
+    }
+
+    private fun getChatPrompt() = listOf(
+        content("user") {
+            text(
+                """English trainer, refine my advanced English!
+                    |-Correct & explain my mistakes.
+                    |-Offer advanced alternatives.
+                    |-Output a maximum of 80 words.
+                |Hello, how are you?""".trimMargin("|")
+            )
+        },
+        content("model") {
+            text(
+                """Your sentence is grammatically correct! However, depending on the context and desired formality,
+                |here are some advanced alternatives:
+                |"Good morning/afternoon/evening, I hope you are well."
+                |"Great to see you! How's it going?"
+                |"Hello! Are you tackling any exciting projects nowadays?"""".trimMargin("|")
+            )
+        },
+        content("user") {
+            text(
+                """English trainer, refine my advanced English!
+                    |-Correct & explain my mistakes.
+                    |-Offer advanced alternatives.
+                    |-Output a maximum of 80 words.
+                |What are you done?""".trimMargin("|")
+            )
+        },
+        content("model") {
+            text(
+                """"What are you done?" is grammatically incorrect. The correct way to ask would be "What have you done?" or "What are you doing?" depending on the context and time frame.
+                |Alternatives in advanced English:
+                |"What have you accomplished recently?
+                |"What have you been up to lately?"
+                |"What progress have you made on [project/task]?" (Tailored to a specific context)"
+                """.trimMargin("|")
+            )
+        }
+    )
 
     fun updatePermissionDialogState(isShowDialog: Boolean) {
         _permissionDialog.update {

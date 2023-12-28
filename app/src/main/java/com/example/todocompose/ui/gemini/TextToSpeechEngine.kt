@@ -5,6 +5,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import java.util.Locale
 
 interface TTSRepository {
     fun speak(text: String)
@@ -17,6 +18,11 @@ class TextToSpeechEngine(private val context: Context) : TTSRepository {
         TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 // Initialization successful
+                tts.apply {
+                    language = Locale.ENGLISH
+                    setPitch(1.3f)
+                    setSpeechRate(1f)
+                }
                 Log.i("TextToSpeechEngine", "Initialization successful")
 
             } else {
