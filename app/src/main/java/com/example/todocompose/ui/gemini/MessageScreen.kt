@@ -37,6 +37,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -45,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -137,6 +137,9 @@ fun ChatContent(
             .fillMaxSize()
             .padding(paddingValues),
     ) {
+        val state = remember {
+            mutableStateOf(uiState.state)
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,12 +149,17 @@ fun ChatContent(
             MessageItem(messages = msg)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        MessageInputBox(
-            uiState.userMessage,
-            viewModel,
-            micPermissionState = micPermissionState
-        )
-        //SpeakingAndListeningBox()
+        when (state) {
+            is MessageState.MessageTypeAudio -> SpeakingAndListeningBox()
+
+            is MessageState.MessageTypeText ->
+                MessageInputBox(
+                    uiState.userMessage,
+                    viewModel,
+                    micPermissionState = micPermissionState
+                )
+
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

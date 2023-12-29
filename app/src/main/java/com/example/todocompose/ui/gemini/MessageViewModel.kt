@@ -40,12 +40,28 @@ data class ChatUiState(
     val isLoading: Boolean = false,
     val userMessage: String = "",
     val errorMessage: Int? = null,
-    val permissionDialog: Pair<Boolean, Int?> = Pair(false, null)
+    val permissionDialog: Pair<Boolean, Int?> = Pair(false, null),
+    val state: MessageState = MessageState.MessageTypeText.Typing
 )
 
-sealed interface Prompt
-data class ChatPrompt(val text: String) : Prompt
-data class StructuredPrompt(val text: String) : Prompt
+sealed class Prompt {
+    data class ChatPrompt(val text: String) : Prompt()
+    data class StructuredPrompt(val text: String) : Prompt()
+}
+
+sealed interface MessageState {
+
+    sealed class MessageTypeText : MessageState {
+        data object Loading : MessageTypeText()
+        data object Typing : MessageTypeText()
+    }
+
+    sealed class MessageTypeAudio : MessageState {
+        data object Loading : MessageTypeAudio()
+        data object Listening : MessageTypeAudio()
+        data object Speaking : MessageTypeAudio()
+    }
+}
 
 class MessageViewModel(
     private val recognitionRepository: SpeechRecognitionRepository,
@@ -70,6 +86,8 @@ class MessageViewModel(
     private val _permissionDialog: MutableStateFlow<Pair<Boolean, Int?>> =
         MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
+    private val _state: MutableStateFlow<MessageState> =
+        MutableStateFlow(MessageState.MessageTypeText.Typing)
 
     private val _messages =
         repository.getChatRepository()
@@ -80,14 +98,16 @@ class MessageViewModel(
         _messages,
         _isLoading,
         _combinedStringFlow,
-        _permissionDialog
-    ) { messages, isLoading, combinedStringFlow, permissionDialog ->
+        _permissionDialog,
+        _state
+    ) { messages, isLoading, combinedStringFlow, permissionDialog, state ->
         ChatUiState(
             messages,
             isLoading,
             combinedStringFlow.first,
             combinedStringFlow.second,
-            permissionDialog
+            permissionDialog,
+            state = state
         )
     }.stateIn(
         scope = viewModelScope,
@@ -116,7 +136,7 @@ class MessageViewModel(
                 val message = _userInputMessage.value
                 updateUserMessage("")
                 createNewChatMessage(message, MessageType.SEND)
-                callGeminiPro(StructuredPrompt(message))
+                callGeminiPro(Prompt.StructuredPrompt(message))
             }
         }
     }
@@ -173,12 +193,12 @@ class MessageViewModel(
     }
 
     private suspend fun sendMessage(prompt: Prompt, model: GenerativeModel) = when (prompt) {
-        is ChatPrompt -> {
+        is Prompt.ChatPrompt -> {
             model.startChat(getChatPrompt())
                 .sendMessage(prompt.text)
         }
 
-        is StructuredPrompt -> {
+        is Prompt.StructuredPrompt -> {
             model.generateContent(getStructuredPrompt(prompt.text))
         }
     }
