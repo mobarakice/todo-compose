@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +38,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -137,9 +137,7 @@ fun ChatContent(
             .fillMaxSize()
             .padding(paddingValues),
     ) {
-        val state = remember {
-            mutableStateOf(uiState.state)
-        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -149,8 +147,8 @@ fun ChatContent(
             MessageItem(messages = msg)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        when (state) {
-            is MessageState.MessageTypeAudio -> SpeakingAndListeningBox()
+        when (uiState.state) {
+            is MessageState.MessageTypeAudio -> SpeakingAndListeningBox(viewModel, uiState.state)
 
             is MessageState.MessageTypeText ->
                 MessageInputBox(
@@ -158,7 +156,6 @@ fun ChatContent(
                     viewModel,
                     micPermissionState = micPermissionState
                 )
-
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -191,7 +188,10 @@ fun MessageTopAppBar(openDrawer: () -> Unit) {
 }
 
 @Composable
-fun SpeakingAndListeningBox() {
+fun SpeakingAndListeningBox(
+    viewModel: MessageViewModel,
+    state: MessageState.MessageTypeAudio
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -207,8 +207,16 @@ fun SpeakingAndListeningBox() {
                 .weight(1f)
                 .fillMaxSize()
         ) {
-            AnimatedListening()
-            //AnimatedSpeaker()
+            when (state) {
+                MessageState.MessageTypeAudio.Loading -> {
+                    Box {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                MessageState.MessageTypeAudio.Listening -> AnimatedListening()
+                MessageState.MessageTypeAudio.Speaking -> AnimatedSpeaker()
+            }
         }
         Spacer(modifier = Modifier.size(8.dp))
         Icon(
@@ -227,7 +235,7 @@ fun SpeakingAndListeningBox() {
 @Preview
 @Composable
 fun PreviewSpeakingAndListeningBox() {
-    SpeakingAndListeningBox()
+//    SpeakingAndListeningBox(state = MessageState.MessageTypeAudio.Listening)
 }
 
 @OptIn(ExperimentalPermissionsApi::class)

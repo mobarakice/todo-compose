@@ -41,7 +41,7 @@ data class ChatUiState(
     val userMessage: String = "",
     val errorMessage: Int? = null,
     val permissionDialog: Pair<Boolean, Int?> = Pair(false, null),
-    val state: MessageState = MessageState.MessageTypeText.Typing
+    val state: MessageState = MessageState.MessageTypeAudio.Loading
 )
 
 sealed class Prompt {
@@ -87,7 +87,7 @@ class MessageViewModel(
         MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
     private val _state: MutableStateFlow<MessageState> =
-        MutableStateFlow(MessageState.MessageTypeText.Typing)
+        MutableStateFlow(MessageState.MessageTypeAudio.Loading)
 
     private val _messages =
         repository.getChatRepository()
