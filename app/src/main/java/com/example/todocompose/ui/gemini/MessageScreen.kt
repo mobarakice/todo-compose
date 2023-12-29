@@ -1,12 +1,5 @@
 package com.example.todocompose.ui.gemini
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.animateValue
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -153,20 +146,12 @@ fun ChatContent(
             MessageItem(messages = msg)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .padding(start = 16.dp, end = 16.dp)
-                .height(56.dp)
-                .fillMaxWidth() // Color for child b
-        ) {
-            MessageInputBox(
-                uiState.userMessage,
-                viewModel,
-                micPermissionState = micPermissionState
-            )
-
-        }
-//        SpeakingAndListeningBox()
+        MessageInputBox(
+            uiState.userMessage,
+            viewModel,
+            micPermissionState = micPermissionState
+        )
+        //SpeakingAndListeningBox()
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -208,19 +193,14 @@ fun SpeakingAndListeningBox() {
             .padding(start = 16.dp, end = 16.dp)
     ) {
         Row(
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .weight(1f)
+                .fillMaxSize()
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_mic),
-                contentDescription = null,
-                tint = Color.White
-            )
-            AnimateDottedText(
-                text = "Listening",
-                style = TextStyle(color = Color.White)
-            )
+            AnimatedListening()
+            //AnimatedSpeaker()
         }
         Spacer(modifier = Modifier.size(8.dp))
         Icon(
@@ -249,76 +229,87 @@ fun MessageInputBox(
     viewModel: MessageViewModel,
     micPermissionState: PermissionState
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically,
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp)
             .height(56.dp)
-            .clickable {}
+            .fillMaxWidth() // Color for child b
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Row(verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-                .padding(
-                    horizontal = 16.dp,
-                )
-                .weight(1f)
+                .fillMaxWidth()
+                .height(56.dp)
                 .clickable {}
         ) {
-            val textFieldColors = TextFieldDefaults.colors(
-                unfocusedPlaceholderColor = Color.LightGray,
-                focusedPlaceholderColor = Color.White,
-                unfocusedTextColor = Color.LightGray,
-                focusedTextColor = Color.White,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = Color.White
-            )
-            //var text by remember { mutableStateOf("") }
-            Icon(painterResource(id = R.drawable.tag_faces_black_24dp_1), null, tint = Color.White)
-            TextField(
-                value = message,
-                onValueChange = viewModel::updateUserMessage,
-                placeholder = {
-                    Text(
-                        text = stringResource(id = R.string.ask_your_question_here),
-                        style = Typography.titleMedium
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                    .padding(
+                        horizontal = 16.dp,
                     )
-                },
-                textStyle = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                maxLines = 1,
-                colors = textFieldColors
-            )
-        }
-        Spacer(modifier = Modifier.size(8.dp))
-        val context = LocalContext.current
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape
+                    .weight(1f)
+                    .clickable {}
+            ) {
+                val textFieldColors = TextFieldDefaults.colors(
+                    unfocusedPlaceholderColor = Color.LightGray,
+                    focusedPlaceholderColor = Color.White,
+                    unfocusedTextColor = Color.LightGray,
+                    focusedTextColor = Color.White,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = Color.White
                 )
-                .clickable {
-                    if (micPermissionState.status.isGranted) {
-                        viewModel.sendNewMessage(context)
-                    } else {
-                        if (micPermissionState.status.shouldShowRationale) {
-                            viewModel.updateDialogText(R.string.microphone_permission_explanation)
+                //var text by remember { mutableStateOf("") }
+                Icon(
+                    painterResource(id = R.drawable.tag_faces_black_24dp_1),
+                    null,
+                    tint = Color.White
+                )
+                TextField(
+                    value = message,
+                    onValueChange = viewModel::updateUserMessage,
+                    placeholder = {
+                        Text(
+                            text = stringResource(id = R.string.ask_your_question_here),
+                            style = Typography.titleMedium
+                        )
+                    },
+                    textStyle = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    colors = textFieldColors
+                )
+            }
+            Spacer(modifier = Modifier.size(8.dp))
+            val context = LocalContext.current
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        if (micPermissionState.status.isGranted) {
+                            viewModel.sendNewMessage(context)
+                        } else {
+                            if (micPermissionState.status.shouldShowRationale) {
+                                viewModel.updateDialogText(R.string.microphone_permission_explanation)
+                            }
+                            micPermissionState.launchPermissionRequest()
                         }
-                        micPermissionState.launchPermissionRequest()
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            val resId = if (message.isEmpty()) R.drawable.ic_mic else R.drawable.ic_send
-            Icon(
-                painterResource(resId),
-                null,
-                tint = Color.White
-            )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                val resId = if (message.isEmpty()) R.drawable.ic_mic else R.drawable.ic_send
+                Icon(
+                    painterResource(resId),
+                    null,
+                    tint = Color.White
+                )
+            }
         }
     }
 }
@@ -427,46 +418,6 @@ fun PreviewMessageReceiveItem() {
 @Composable
 fun PreviewMessageSendItem() {
     MessageSendItem(Message("Hello", MessageType.SEND))
-}
-
-@Composable
-fun AnimateDottedText(
-    text: String,
-    modifier: Modifier = Modifier,
-    style: TextStyle = TextStyle.Default,
-    cycleDuration: Int = 1000 // Milliseconds
-) {
-    // Create an infinite transition
-    val transition = rememberInfiniteTransition(label = "Dots Transition")
-
-    // Define the animated value for the number of visible dots
-    val visibleDotsCount = transition.animateValue(
-        initialValue = 0,
-        targetValue = 4,
-        typeConverter = Int.VectorConverter,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = cycleDuration,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "Visible Dots Count"
-    )
-
-    Row (verticalAlignment = Alignment.CenterVertically){
-        Text(text = stringResource(R.string.listening), color = Color.White)
-        repeat(visibleDotsCount.value) {
-            Spacer(modifier = Modifier.size(4.dp))
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .align(Alignment.CenterVertically)
-                    .background(color = Color.White, shape = CircleShape)
-            )
-        }
-    }
-
 }
 
 
