@@ -22,10 +22,7 @@ import com.google.ai.client.generativeai.type.SafetySetting
 import com.google.ai.client.generativeai.type.asTextOrNull
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -87,7 +84,7 @@ class MessageViewModel(
         MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
     private val _state: MutableStateFlow<MessageState> =
-        MutableStateFlow(MessageState.MessageTypeAudio.Loading)
+        MutableStateFlow(MessageState.MessageTypeText.Typing)
 
     private val _messages =
         repository.getChatRepository()
@@ -185,6 +182,7 @@ class MessageViewModel(
                 Log.i(TAG, "Total: $contentParts")
 
                 createNewChatMessage(text, MessageType.RECEIVE)
+                updateState(MessageState.MessageTypeAudio.Speaking)
                 ttsRepository.speak(text)
             } catch (e: Exception) {
                 Log.e(TAG, "${e.message}")
@@ -265,6 +263,10 @@ class MessageViewModel(
         }
     }
 
+    private fun updateState(state: MessageState) {
+        _state.value = state
+    }
+
     companion object {
         private val TAG = MessageViewModel::class.java.simpleName
 
@@ -292,18 +294,20 @@ class MessageViewModel(
             }
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + Job())
-
     private fun startListening(context: Context) {
-//        scope.launch {
-//
-//        }
         viewModelScope.launch {
             if (SpeechRecognizer.isRecognitionAvailable(context)) {
+                updateState(MessageState.MessageTypeAudio.Listening)
                 Log.i(TAG, "SpeechRecognizer is available")
                 recognitionRepository.startListening { result ->
                     Log.i(TAG, "Text: ${result.text}")
-                    updateUserMessage(result.text)
+                    //updateUserMessage(result.text)
+                    viewModelScope.launch {
+                        val text = result.text
+                        createNewChatMessage(text, MessageType.SEND)
+                        updateState(MessageState.MessageTypeAudio.Loading)
+                        callGeminiPro(Prompt.StructuredPrompt(text))
+                    }
                 }
             } else {
                 Log.i(TAG, "SpeechRecognizer is not available")
@@ -312,14 +316,11 @@ class MessageViewModel(
     }
 
     fun stopListening() {
-        scope.launch {
+        updateState(MessageState.MessageTypeText.Typing)
+        viewModelScope.launch {
             recognitionRepository.stopListening()
+            ttsRepository.stop()
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        scope.cancel()
     }
 }
 

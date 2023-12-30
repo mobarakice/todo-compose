@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -148,7 +147,11 @@ fun ChatContent(
         }
         Spacer(modifier = Modifier.height(8.dp))
         when (uiState.state) {
-            is MessageState.MessageTypeAudio -> SpeakingAndListeningBox(viewModel, uiState.state)
+            is MessageState.MessageTypeAudio ->
+                SpeakingAndListeningBox(
+                    viewModel,
+                    uiState.state
+                )
 
             is MessageState.MessageTypeText ->
                 MessageInputBox(
@@ -196,7 +199,7 @@ fun SpeakingAndListeningBox(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(90.dp)
+            .height(56.dp)
             .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
             .padding(start = 16.dp, end = 16.dp)
     ) {
@@ -208,12 +211,7 @@ fun SpeakingAndListeningBox(
                 .fillMaxSize()
         ) {
             when (state) {
-                MessageState.MessageTypeAudio.Loading -> {
-                    Box {
-                        CircularProgressIndicator()
-                    }
-                }
-
+                MessageState.MessageTypeAudio.Loading -> ThinkingLoader(R.string.thinking_loader)
                 MessageState.MessageTypeAudio.Listening -> AnimatedListening()
                 MessageState.MessageTypeAudio.Speaking -> AnimatedSpeaker()
             }
@@ -223,19 +221,13 @@ fun SpeakingAndListeningBox(
             Icons.Filled.Close,
             contentDescription = null,
             modifier = Modifier
-                .size(24.dp)
+                .size(36.dp)
                 .clickable {
-
+                    viewModel.stopListening()
                 },
             tint = MaterialTheme.colorScheme.inversePrimary
         )
     }
-}
-
-@Preview
-@Composable
-fun PreviewSpeakingAndListeningBox() {
-//    SpeakingAndListeningBox(state = MessageState.MessageTypeAudio.Listening)
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -249,7 +241,7 @@ fun MessageInputBox(
         modifier = Modifier
             .padding(start = 16.dp, end = 16.dp)
             .height(56.dp)
-            .fillMaxWidth() // Color for child b
+            .fillMaxWidth()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -278,7 +270,6 @@ fun MessageInputBox(
                     unfocusedIndicatorColor = Color.Transparent,
                     cursorColor = Color.White
                 )
-                //var text by remember { mutableStateOf("") }
                 Icon(
                     painterResource(id = R.drawable.tag_faces_black_24dp_1),
                     null,
@@ -319,9 +310,11 @@ fun MessageInputBox(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                val resId = if (message.isEmpty()) R.drawable.ic_mic else R.drawable.ic_send
                 Icon(
-                    painterResource(resId),
+                    painterResource(
+                        if (message.isEmpty()) R.drawable.ic_mic
+                        else R.drawable.ic_send
+                    ),
                     null,
                     tint = Color.White
                 )
@@ -407,32 +400,38 @@ fun CustomText(message: String) {
 
 //@Preview
 //@Composable
-//fun PreScreen() {
+//fun MessageScreenPreview() {
 //    MessageScreen(openDrawer = { /*TODO*/ }, viewModel = null)
 //}
 
 @Preview
 @Composable
-fun PreTopBar() {
+fun SpeakingAndListeningBoxPreview() {
+//    SpeakingAndListeningBox(state = MessageState.MessageTypeAudio.Listening)
+}
+
+@Preview
+@Composable
+fun TopBarPreview() {
     MessageTopAppBar { }
 }
 
 @Preview
 @Composable
-fun PreviewMessageItem() {
+fun MessageItemPreview() {
     val msg = getDummyData()
     MessageItem(messages = msg)
 }
 
 @Preview
 @Composable
-fun PreviewMessageReceiveItem() {
+fun MessageReceiveItemPreview() {
     MessageReceiveItem(Message("Hello, how can I help you?", MessageType.RECEIVE))
 }
 
 @Preview
 @Composable
-fun PreviewMessageSendItem() {
+fun MessageSendItemPreview() {
     MessageSendItem(Message("Hello", MessageType.SEND))
 }
 
