@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -160,7 +161,7 @@ fun ChatContent(
                     micPermissionState = micPermissionState
                 )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -198,10 +199,10 @@ fun SpeakingAndListeningBox(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .padding(start = 16.dp, end = 16.dp)
             .fillMaxWidth()
             .height(56.dp)
             .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-            .padding(start = 16.dp, end = 16.dp)
     ) {
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -240,24 +241,24 @@ fun MessageInputBox(
     Box(
         modifier = Modifier
             .padding(start = 16.dp, end = 16.dp)
-            .height(56.dp)
+            .defaultMinSize(minHeight = 56.dp)
             .fillMaxWidth()
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .clickable {}
+                .wrapContentHeight()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .wrapContentHeight()
                     .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .padding(
                         horizontal = 16.dp,
                     )
                     .weight(1f)
-                    .clickable {}
             ) {
                 val textFieldColors = TextFieldDefaults.colors(
                     unfocusedPlaceholderColor = Color.LightGray,
@@ -285,7 +286,10 @@ fun MessageInputBox(
                         )
                     },
                     textStyle = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 1,
+                    maxLines = 2,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentSize(),
                     colors = textFieldColors
                 )
             }

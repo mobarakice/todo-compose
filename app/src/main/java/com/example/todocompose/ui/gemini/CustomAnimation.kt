@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.todocompose.R
 import com.example.todocompose.ui.theme.TodoComposeTheme
+import com.example.todocompose.ui.theme.Typography
 import kotlinx.coroutines.delay
 
 @Preview(showBackground = false)
@@ -211,7 +212,7 @@ fun DrawArc(
 fun IndeterminateCircularIndicator() {
     Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(30.dp),
             color = MaterialTheme.colorScheme.secondary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
@@ -222,7 +223,7 @@ fun IndeterminateCircularIndicator() {
 fun TextWithAnimatedDots(
     @StringRes resInt: Int,
     color: Color = MaterialTheme.colorScheme.onSecondary,
-    style: TextStyle = MaterialTheme.typography.titleLarge
+    style: TextStyle = Typography.bodySmall
 ) {
     val animatedProgress = remember { Animatable(0f) }
     LaunchedEffect(animatedProgress) {
@@ -258,9 +259,11 @@ fun TextWithAnimatedDots(
 fun ThinkingLoader(
     @StringRes resInt: Int,
     color: Color = MaterialTheme.colorScheme.onSecondary,
-    style: TextStyle = MaterialTheme.typography.titleLarge
+    style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         IndeterminateCircularIndicator()
         Spacer(modifier = Modifier.size(8.dp))
         TextWithAnimatedDots(resInt, color, style)

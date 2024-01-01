@@ -19,6 +19,8 @@ import com.example.todocompose.TodoDestinationsArgs.USER_MESSAGE_ARG
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.ui.addedittask.AddEditTaskScreen
 import com.example.todocompose.ui.addedittask.AddEditTaskViewModel
+import com.example.todocompose.ui.gemini.GeminiRepository
+import com.example.todocompose.ui.gemini.GeminiUseCase
 import com.example.todocompose.ui.gemini.MessageScreen
 import com.example.todocompose.ui.gemini.MessageViewModel
 import com.example.todocompose.ui.gemini.SpeechRecognitionRepository
@@ -84,8 +86,10 @@ fun TodoNavGraph(
                 SpeechRecognitionUseCase(LocalContext.current)
             val ttsRepository: TTSRepository =
                 TextToSpeechEngine(LocalContext.current)
+            val geminiRepository:GeminiRepository =  GeminiUseCase()
             val messageViewModel: MessageViewModel = viewModel(
                 factory = MessageViewModel.provideFactory(
+                    geminiRepository = geminiRepository,
                     recognitionRepository = recognitionRepository,
                     ttsRepository = ttsRepository,
                     repository = repository,

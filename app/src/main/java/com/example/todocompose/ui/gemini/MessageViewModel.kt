@@ -9,19 +9,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
-import com.example.todocompose.BuildConfig
 import com.example.todocompose.data.AppRepository
 import com.example.todocompose.data.db.MessageType
 import com.example.todocompose.data.db.entity.ChatMessage
 import com.example.todocompose.utils.WhileUiSubscribed
 import com.example.todocompose.utils.toMessages
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.BlockThreshold
-import com.google.ai.client.generativeai.type.HarmCategory
-import com.google.ai.client.generativeai.type.SafetySetting
-import com.google.ai.client.generativeai.type.asTextOrNull
-import com.google.ai.client.generativeai.type.content
-import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,11 +53,30 @@ sealed interface MessageState {
 }
 
 class MessageViewModel(
+    private val repository: AppRepository,
+    private val geminiRepository: GeminiRepository = GeminiUseCase(),
     private val recognitionRepository: SpeechRecognitionRepository,
     private val ttsRepository: TTSRepository,
-    private val repository: AppRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val ttsListener = object : TTSListener {
+        override fun onStart(utteranceId: String?) {
+
+        }
+
+        override fun onDone(utteranceId: String?) {
+            ttsRepository.stop()
+            updateState(MessageState.MessageTypeAudio.Listening)
+            startListening()
+        }
+
+        override fun onError(utteranceId: String?, errorCode: Int) {
+            ttsRepository.stop()
+            updateState(MessageState.MessageTypeAudio.Listening)
+        }
+
+    }
 
     private val _savedUserLastInput = savedStateHandle.getStateFlow(
         USER_LAST_INPUT_STATE_KEY, ""
@@ -84,7 +95,7 @@ class MessageViewModel(
         MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
     private val _state: MutableStateFlow<MessageState> =
-        MutableStateFlow(MessageState.MessageTypeText.Typing)
+        MutableStateFlow(MessageState.MessageTypeAudio.Speaking)
 
     private val _messages =
         repository.getChatRepository()
@@ -112,8 +123,6 @@ class MessageViewModel(
         initialValue = ChatUiState(isLoading = true)
     )
 
-//    val uiState: StateFlow<ChatUiState>
-
     fun updateUserMessage(newMessage: String) {
         _userInputMessage.value = newMessage
         savedStateHandle[USER_LAST_INPUT_STATE_KEY] = newMessage
@@ -128,7 +137,11 @@ class MessageViewModel(
 
             if (_userInputMessage.value.isEmpty()) {
                 //updateErrorMessage(R.string.ask_your_question_here)
-                startListening(context)
+                if (isRecognitionAvailable(context)) {
+                    startListening()
+                } else {
+                    Log.i(TAG, "SpeechRecognizer is not available")
+                }
             } else {
                 val message = _userInputMessage.value
                 updateUserMessage("")
@@ -149,107 +162,27 @@ class MessageViewModel(
 
     private suspend fun callGeminiPro(prompt: Prompt) {
         withContext(Dispatchers.IO) {
-            try {
-                val model = GenerativeModel(
-                    "gemini-pro",
-                    // Retrieve API key as an environmental variable defined in a Build Configuration
-                    // see https://github.com/google/secrets-gradle-plugin for further instructions
-                    BuildConfig.apiKey,
-                    generationConfig = generationConfig {
-                        temperature = 0.9f
-                        topK = 1
-                        topP = 1f
-                        maxOutputTokens = 2048
-                    },
-                    safetySettings = listOf(
-                        SafetySetting(HarmCategory.HARASSMENT, BlockThreshold.MEDIUM_AND_ABOVE),
-                        SafetySetting(HarmCategory.HATE_SPEECH, BlockThreshold.MEDIUM_AND_ABOVE),
-                        SafetySetting(
-                            HarmCategory.SEXUALLY_EXPLICIT,
-                            BlockThreshold.MEDIUM_AND_ABOVE
-                        ),
-                        SafetySetting(
-                            HarmCategory.DANGEROUS_CONTENT,
-                            BlockThreshold.MEDIUM_AND_ABOVE
-                        ),
-                    ),
-                )
-                val response = sendMessage(prompt, model)
-                Log.i(TAG, "Response: $response")
-                val text = response.text ?: ""
-                Log.i(TAG, "Text: $text")
-                val contentParts = response.candidates.first().content.parts.first().asTextOrNull()
-                Log.i(TAG, "Total: $contentParts")
+            when (val response = geminiRepository.startConversation(prompt)) {
+                is GeminiResponse.Success -> {
+                    createNewChatMessage(response.text, MessageType.RECEIVE)
+                    updateState(MessageState.MessageTypeAudio.Speaking)
+                    ttsRepository.speak(response.text, ttsListener)
+                }
 
-                createNewChatMessage(text, MessageType.RECEIVE)
-                updateState(MessageState.MessageTypeAudio.Speaking)
-                ttsRepository.speak(text)
-            } catch (e: Exception) {
-                Log.e(TAG, "${e.message}")
+                is GeminiResponse.Error -> {
+                    Log.e(TAG, response.error)
+                    when (prompt) {
+                        is Prompt.ChatPrompt ->
+                            updateState(MessageState.MessageTypeText.Typing)
+
+                        is Prompt.StructuredPrompt ->
+                            updateState(MessageState.MessageTypeAudio.Listening)
+
+                    }
+                }
             }
         }
     }
-
-    private suspend fun sendMessage(prompt: Prompt, model: GenerativeModel) = when (prompt) {
-        is Prompt.ChatPrompt -> {
-            model.startChat(getChatPrompt())
-                .sendMessage(prompt.text)
-        }
-
-        is Prompt.StructuredPrompt -> {
-            model.generateContent(getStructuredPrompt(prompt.text))
-        }
-    }
-
-    private fun getStructuredPrompt(text: String) = content {
-        text("English trainer, refine my advanced English! <div>-Correct & explain my mistakes. </div><div>-Offer advanced alternatives. </div><div>-Output a maximum of 80 words</div>")
-        text("Request: Hello, how are you?")
-        text("Response: Your sentence is grammatically correct! However, depending on the context and desired formality, here are some advanced alternatives:\n\"Good morning/afternoon/evening, I hope you are well.\"\n\"Great to see you! How's it going?\"\n\"Hello! Are you tackling any exciting projects nowadays?\"")
-        text("Request: What are you done?")
-        text("Response: \"What are you done?\" is grammatically incorrect. The correct way to ask would be \"What have you done?\" or \"What are you doing?\" depending on the context and time frame.\nAlternatives in advanced English:\n-\"What have you accomplished recently?\" \n-\"What have you been up to lately?\" \n-\"What progress have you made on [project/task]?\" (Tailored to a specific context).")
-        text("Request: $text")
-        text("Response: ")
-    }
-
-    private fun getChatPrompt() = listOf(
-        content("user") {
-            text(
-                """English trainer, refine my advanced English!
-                    |-Correct & explain my mistakes.
-                    |-Offer advanced alternatives.
-                    |-Output a maximum of 80 words.
-                |Hello, how are you?""".trimMargin("|")
-            )
-        },
-        content("model") {
-            text(
-                """Your sentence is grammatically correct! However, depending on the context and desired formality,
-                |here are some advanced alternatives:
-                |"Good morning/afternoon/evening, I hope you are well."
-                |"Great to see you! How's it going?"
-                |"Hello! Are you tackling any exciting projects nowadays?"""".trimMargin("|")
-            )
-        },
-        content("user") {
-            text(
-                """English trainer, refine my advanced English!
-                    |-Correct & explain my mistakes.
-                    |-Offer advanced alternatives.
-                    |-Output a maximum of 80 words.
-                |What are you done?""".trimMargin("|")
-            )
-        },
-        content("model") {
-            text(
-                """"What are you done?" is grammatically incorrect. The correct way to ask would be "What have you done?" or "What are you doing?" depending on the context and time frame.
-                |Alternatives in advanced English:
-                |"What have you accomplished recently?
-                |"What have you been up to lately?"
-                |"What progress have you made on [project/task]?" (Tailored to a specific context)"
-                """.trimMargin("|")
-            )
-        }
-    )
 
     fun updatePermissionDialogState(isShowDialog: Boolean) {
         _permissionDialog.update {
@@ -272,6 +205,7 @@ class MessageViewModel(
 
         fun provideFactory(
             repository: AppRepository,
+            geminiRepository: GeminiRepository,
             recognitionRepository: SpeechRecognitionRepository,
             ttsRepository: TTSRepository,
             owner: SavedStateRegistryOwner,
@@ -285,35 +219,36 @@ class MessageViewModel(
                     handle: SavedStateHandle
                 ): T {
                     return MessageViewModel(
+                        repository,
+                        geminiRepository,
                         recognitionRepository,
                         ttsRepository,
-                        repository,
                         handle
                     ) as T
                 }
             }
     }
 
-    private fun startListening(context: Context) {
+    private fun startListening() {
         viewModelScope.launch {
-            if (SpeechRecognizer.isRecognitionAvailable(context)) {
-                updateState(MessageState.MessageTypeAudio.Listening)
-                Log.i(TAG, "SpeechRecognizer is available")
-                recognitionRepository.startListening { result ->
-                    Log.i(TAG, "Text: ${result.text}")
-                    //updateUserMessage(result.text)
-                    viewModelScope.launch {
-                        val text = result.text
-                        createNewChatMessage(text, MessageType.SEND)
-                        updateState(MessageState.MessageTypeAudio.Loading)
-                        callGeminiPro(Prompt.StructuredPrompt(text))
-                    }
+            updateState(MessageState.MessageTypeAudio.Listening)
+            Log.i(TAG, "SpeechRecognizer is available")
+            recognitionRepository.startListening { result ->
+                Log.i(TAG, "Text: ${result.text}")
+                //updateUserMessage(result.text)
+                viewModelScope.launch {
+                    val text = result.text
+                    createNewChatMessage(text, MessageType.SEND)
+                    updateState(MessageState.MessageTypeAudio.Loading)
+                    recognitionRepository.stopListening()
+                    callGeminiPro(Prompt.StructuredPrompt(text))
                 }
-            } else {
-                Log.i(TAG, "SpeechRecognizer is not available")
             }
         }
     }
+
+    private fun isRecognitionAvailable(context: Context) =
+        SpeechRecognizer.isRecognitionAvailable(context)
 
     fun stopListening() {
         updateState(MessageState.MessageTypeText.Typing)
@@ -321,6 +256,12 @@ class MessageViewModel(
             recognitionRepository.stopListening()
             ttsRepository.stop()
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsRepository.stop()
+        ttsRepository.shutdown()
     }
 }
 
