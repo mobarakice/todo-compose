@@ -30,7 +30,7 @@ data class ChatUiState(
     val userMessage: String = "",
     val errorMessage: Int? = null,
     val permissionDialog: Pair<Boolean, Int?> = Pair(false, null),
-    val state: MessageState = MessageState.MessageTypeAudio.Loading
+    val state: MessageState = MessageState.MessageTypeText.Typing
 )
 
 sealed class Prompt {
@@ -95,7 +95,7 @@ class MessageViewModel(
         MutableStateFlow(Pair(false, null))
     private val _isLoading = MutableStateFlow(false)
     private val _state: MutableStateFlow<MessageState> =
-        MutableStateFlow(MessageState.MessageTypeAudio.Speaking)
+        MutableStateFlow(MessageState.MessageTypeText.Typing)
 
     private val _messages =
         repository.getChatRepository()
@@ -115,7 +115,7 @@ class MessageViewModel(
             combinedStringFlow.first,
             combinedStringFlow.second,
             permissionDialog,
-            state = state
+            state
         )
     }.stateIn(
         scope = viewModelScope,
@@ -145,6 +145,7 @@ class MessageViewModel(
             } else {
                 val message = _userInputMessage.value
                 updateUserMessage("")
+                updateState(MessageState.MessageTypeText.Loading)
                 createNewChatMessage(message, MessageType.SEND)
                 callGeminiPro(Prompt.StructuredPrompt(message))
             }
@@ -165,17 +166,25 @@ class MessageViewModel(
             when (val response = geminiRepository.startConversation(prompt)) {
                 is GeminiResponse.Success -> {
                     createNewChatMessage(response.text, MessageType.RECEIVE)
-                    updateState(MessageState.MessageTypeAudio.Speaking)
-                    ttsRepository.speak(response.text, ttsListener)
+                    when (_state.value) {
+                        is MessageState.MessageTypeText -> {
+                            updateState(MessageState.MessageTypeText.Typing)
+                        }
+
+                        is MessageState.MessageTypeAudio -> {
+                            updateState(MessageState.MessageTypeAudio.Speaking)
+                            ttsRepository.speak(response.text, ttsListener)
+                        }
+                    }
                 }
 
                 is GeminiResponse.Error -> {
                     Log.e(TAG, response.error)
-                    when (prompt) {
-                        is Prompt.ChatPrompt ->
+                    when (_state.value) {
+                        is MessageState.MessageTypeText ->
                             updateState(MessageState.MessageTypeText.Typing)
 
-                        is Prompt.StructuredPrompt ->
+                        is MessageState.MessageTypeAudio ->
                             updateState(MessageState.MessageTypeAudio.Listening)
 
                     }

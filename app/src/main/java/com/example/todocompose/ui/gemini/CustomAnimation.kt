@@ -59,19 +59,18 @@ fun AnimatedSpeaker(
     animationDelay: Int = 1200
 ) {
 
-// 3 circles
     val circles = List(3) {
         remember {
             Animatable(initialValue = 0f)
         }
     }
 
-    circles.forEachIndexed { index, animatable ->
+    circles.forEachIndexed { index, value ->
         LaunchedEffect(Unit) {
             // Use coroutine delay to sync animations
             // divide the animation delay by number of circles
             delay(timeMillis = (animationDelay / 3L) * (index + 1))
-            animatable.animateTo(
+            value.animateTo(
                 targetValue = 1f,
                 animationSpec = infiniteRepeatable(
                     animation = tween(
@@ -95,16 +94,13 @@ fun AnimatedSpeaker(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSecondary
         )
-        circles.forEachIndexed { _, animatable ->
+        circles.forEach {
             Box(
                 modifier = Modifier
-                    .scale(scale = animatable.value)
+                    .scale(scale = it.value)
                     .clip(shape = CircleShape)
                     .fillMaxSize()
-                    .background(
-                        color = circleColor
-                            .copy(alpha = (1 - animatable.value))
-                    )
+                    .background(color = circleColor.copy(alpha = (1 - it.value)))
             )
         }
     }
@@ -209,10 +205,13 @@ fun DrawArc(
 }
 
 @Composable
-fun IndeterminateCircularIndicator() {
-    Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
+fun IndeterminateCircularIndicator(size: Dp = 30.dp) {
+    Box(
+        modifier = Modifier.wrapContentSize(),
+        contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(
-            modifier = Modifier.size(30.dp),
+            modifier = Modifier.size(size),
             color = MaterialTheme.colorScheme.secondary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
@@ -257,12 +256,14 @@ fun TextWithAnimatedDots(
 
 @Composable
 fun ThinkingLoader(
+    modifier: Modifier = Modifier,
     @StringRes resInt: Int,
     color: Color = MaterialTheme.colorScheme.onSecondary,
     style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
     ) {
         IndeterminateCircularIndicator()
         Spacer(modifier = Modifier.size(8.dp))
@@ -275,7 +276,7 @@ fun ThinkingLoader(
 @Composable
 fun ThinkingLoaderPreview() {
     TodoComposeTheme {
-        ThinkingLoader(R.string.thinking_loader)
+        ThinkingLoader(resInt = R.string.thinking_loader)
     }
 }
 

@@ -49,10 +49,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todocompose.R
 import com.example.todocompose.data.db.MessageType
+import com.example.todocompose.ui.theme.TodoComposeTheme
 import com.example.todocompose.ui.theme.Typography
 import com.example.todocompose.utils.CustomAlertDialog
 import com.example.todocompose.utils.CustomSnackbar
@@ -90,6 +92,7 @@ fun MessageScreen(
     ) { paddingValues ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ChatContent(viewModel, uiState, paddingValues, micPermissionState)
+
         //MicPermission(micPermissionState)
 
         // Check for user messages to display on the screen
@@ -135,28 +138,38 @@ fun ChatContent(
         verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues),
+            .padding(paddingValues)
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f) // Take remaining space equally
         ) {
-            val msg = uiState.messages
-            MessageItem(messages = msg)
+            if (uiState.isLoading) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    IndeterminateCircularIndicator(56.dp)
+                }
+            } else {
+                val msg = uiState.messages
+                MessageItem(messages = msg)
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        when (uiState.state) {
+        when (val state = uiState.state) {
             is MessageState.MessageTypeAudio ->
                 SpeakingAndListeningBox(
                     viewModel,
-                    uiState.state
+                    state
                 )
 
             is MessageState.MessageTypeText ->
                 MessageInputBox(
                     uiState.userMessage,
+                    state,
                     viewModel,
                     micPermissionState = micPermissionState
                 )
@@ -199,7 +212,7 @@ fun SpeakingAndListeningBox(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .padding(start = 16.dp, end = 16.dp)
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .height(56.dp)
             .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
@@ -212,7 +225,11 @@ fun SpeakingAndListeningBox(
                 .fillMaxSize()
         ) {
             when (state) {
-                MessageState.MessageTypeAudio.Loading -> ThinkingLoader(R.string.thinking_loader)
+                MessageState.MessageTypeAudio.Loading -> ThinkingLoader(
+                    modifier = Modifier.padding(8.dp),
+                    resInt = R.string.thinking_loader
+                )
+
                 MessageState.MessageTypeAudio.Listening -> AnimatedListening()
                 MessageState.MessageTypeAudio.Speaking -> AnimatedSpeaker()
             }
@@ -222,6 +239,7 @@ fun SpeakingAndListeningBox(
             Icons.Filled.Close,
             contentDescription = null,
             modifier = Modifier
+                .padding(8.dp)
                 .size(36.dp)
                 .clickable {
                     viewModel.stopListening()
@@ -235,6 +253,7 @@ fun SpeakingAndListeningBox(
 @Composable
 fun MessageInputBox(
     message: String,
+    state: MessageState.MessageTypeText,
     viewModel: MessageViewModel,
     micPermissionState: PermissionState
 ) {
@@ -244,86 +263,102 @@ fun MessageInputBox(
             .defaultMinSize(minHeight = 56.dp)
             .fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .wrapContentHeight()
-                    .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-                    .padding(
-                        horizontal = 16.dp,
-                    )
-                    .weight(1f)
-            ) {
-                val textFieldColors = TextFieldDefaults.colors(
-                    unfocusedPlaceholderColor = Color.LightGray,
-                    focusedPlaceholderColor = Color.White,
-                    unfocusedTextColor = Color.LightGray,
-                    focusedTextColor = Color.White,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = Color.White
-                )
-                Icon(
-                    painterResource(id = R.drawable.tag_faces_black_24dp_1),
-                    null,
-                    tint = Color.White
-                )
-                TextField(
-                    value = message,
-                    onValueChange = viewModel::updateUserMessage,
-                    placeholder = {
-                        Text(
-                            text = stringResource(id = R.string.ask_your_question_here),
-                            style = Typography.titleMedium
-                        )
-                    },
-                    textStyle = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 2,
+
+        when (state) {
+            MessageState.MessageTypeText.Loading ->
+                ThinkingLoader(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .wrapContentSize(),
-                    colors = textFieldColors
+                        .height(56.dp)
+                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                        .padding(horizontal = 16.dp),
+                    resInt = R.string.thinking_loader
                 )
-            }
-            Spacer(modifier = Modifier.size(8.dp))
-            val context = LocalContext.current
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    )
-                    .clickable {
-                        if (micPermissionState.status.isGranted) {
-                            viewModel.sendNewMessage(context)
-                        } else {
-                            if (micPermissionState.status.shouldShowRationale) {
-                                viewModel.updateDialogText(R.string.microphone_permission_explanation)
-                            }
-                            micPermissionState.launchPermissionRequest()
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painterResource(
-                        if (message.isEmpty()) R.drawable.ic_mic
-                        else R.drawable.ic_send
-                    ),
-                    null,
-                    tint = Color.White
-                )
-            }
+
+            MessageState.MessageTypeText.Typing ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .wrapContentHeight()
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                            .padding(horizontal = 16.dp)
+                            .weight(1f)
+                    ) {
+                        val textFieldColors = TextFieldDefaults.colors(
+                            unfocusedPlaceholderColor = Color.LightGray,
+                            focusedPlaceholderColor = Color.White,
+                            unfocusedTextColor = Color.LightGray,
+                            focusedTextColor = Color.White,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = Color.White
+                        )
+                        Icon(
+                            painterResource(id = R.drawable.tag_faces_black_24dp_1),
+                            null,
+                            tint = Color.White
+                        )
+                        TextField(
+                            value = message,
+                            onValueChange = viewModel::updateUserMessage,
+                            placeholder = {
+                                Text(
+                                    text = stringResource(id = R.string.ask_your_question_here),
+                                    style = Typography.titleMedium
+                                )
+                            },
+                            textStyle = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 2,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentSize(),
+                            colors = textFieldColors
+                        )
+                    }
+                    Spacer(modifier = Modifier.size(8.dp))
+                    val context = LocalContext.current
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                            .clickable {
+                                if (micPermissionState.status.isGranted) {
+                                    viewModel.sendNewMessage(context)
+                                } else {
+                                    if (micPermissionState.status.shouldShowRationale) {
+                                        viewModel.updateDialogText(R.string.microphone_permission_explanation)
+                                    }
+                                    micPermissionState.launchPermissionRequest()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painterResource(
+                                if (message.isEmpty()) R.drawable.ic_mic
+                                else R.drawable.ic_send
+                            ),
+                            null,
+                            tint = Color.White
+                        )
+                    }
+                }
         }
+
     }
 }
 
@@ -361,15 +396,22 @@ fun getDummyData() = listOf(
 fun MessageSendItem(item: Message) {
     Row(
         modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-            .wrapContentHeight(),
+            .padding(top = 8.dp, bottom = 8.dp)
+            .wrapContentSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End
     ) {
-        CustomText(message = item.message)
-        Spacer(modifier = Modifier.size(8.dp))
-        Icon(Icons.Filled.AccountCircle, contentDescription = null)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier
+                .padding(start = 56.dp)
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            CustomText(message = item.message, MaterialTheme.colorScheme.inverseOnSurface)
+        }
+        ProfileIcon(start = 8.dp, end = 16.dp)
     }
 }
 
@@ -377,25 +419,44 @@ fun MessageSendItem(item: Message) {
 fun MessageReceiveItem(item: Message) {
     Row(
         modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-            .wrapContentHeight(),
+            .padding(top = 8.dp, bottom = 8.dp)
+            .wrapContentSize(),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
     ) {
-        Icon(Icons.Filled.AccountCircle, contentDescription = null)
-        Spacer(modifier = Modifier.size(8.dp))
-        CustomText(message = item.message)
+        ProfileIcon(start = 16.dp, end = 8.dp)
+        Row(
+            modifier = Modifier
+                .padding(end = 56.dp)
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            CustomText(message = item.message, MaterialTheme.colorScheme.inversePrimary)
+        }
     }
 }
 
 @Composable
-fun CustomText(message: String) {
+fun ProfileIcon(start: Dp, end: Dp) {
+    Row(
+        modifier = Modifier.size(56.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Spacer(modifier = Modifier.size(start))
+        Icon(Icons.Filled.AccountCircle, contentDescription = null, modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.size(end))
+    }
+}
+
+@Composable
+fun CustomText(message: String, color: Color = MaterialTheme.colorScheme.inverseOnSurface) {
     Box(
         modifier = Modifier
             .wrapContentSize()
             .background(
-                color = Color.LightGray,
-                shape = RoundedCornerShape(4.dp)
+                color = color,
+                shape = RoundedCornerShape(16.dp)
             )
     ) {
         Text(text = message, modifier = Modifier.padding(8.dp))
@@ -437,6 +498,14 @@ fun MessageReceiveItemPreview() {
 @Composable
 fun MessageSendItemPreview() {
     MessageSendItem(Message("Hello", MessageType.SEND))
+}
+
+@Preview
+@Composable
+fun ProfileIconPreview() {
+    TodoComposeTheme {
+        ProfileIcon(start = 16.dp, end = 16.dp)
+    }
 }
 
 
