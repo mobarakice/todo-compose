@@ -1,5 +1,6 @@
 package com.example.todocompose.ui.gemini
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -424,7 +426,7 @@ fun MessageReceiveItem(item: Message) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
     ) {
-        ProfileIcon(start = 16.dp, end = 8.dp)
+        ProfileIcon(R.drawable.ic_robot_solid, start = 16.dp, end = 8.dp)
         Row(
             modifier = Modifier
                 .padding(end = 56.dp)
@@ -437,14 +439,23 @@ fun MessageReceiveItem(item: Message) {
 }
 
 @Composable
-fun ProfileIcon(start: Dp, end: Dp) {
+fun ProfileIcon(@DrawableRes resId: Int? = null, start: Dp, end: Dp) {
     Row(
         modifier = Modifier.size(56.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.size(start))
-        Icon(Icons.Filled.AccountCircle, contentDescription = null, modifier = Modifier.size(36.dp))
+        val painter = if (resId != null)
+            painterResource(id = resId)
+        else
+            rememberVectorPainter(image = Icons.Filled.AccountCircle)
+        Icon(
+            painter = painter,
+            contentDescription = null,
+            modifier = Modifier.size(36.dp),
+            tint = MaterialTheme.colorScheme.surfaceTint
+        )
         Spacer(modifier = Modifier.size(end))
     }
 }

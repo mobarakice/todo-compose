@@ -43,11 +43,13 @@ class GeminiUseCase : GeminiRepository {
     private suspend fun sendMessage(prompt: Prompt) = when (prompt) {
         is Prompt.ChatPrompt -> {
             model.startChat(GeminiUtils.getChatPrompt())
-                .sendMessage(prompt.text)
+                .sendMessage(prompt.text.replaceFirstChar { it.uppercase() })
         }
 
         is Prompt.StructuredPrompt -> {
-            model.generateContent(GeminiUtils.getStructuredPrompt(prompt.text))
+            model.generateContent(
+                GeminiUtils.getStructuredPrompt(prompt.text.replaceFirstChar { it.uppercase() })
+            )
         }
     }
 

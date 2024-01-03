@@ -250,7 +250,7 @@ class MessageViewModel(
                     createNewChatMessage(text, MessageType.SEND)
                     updateState(MessageState.MessageTypeAudio.Loading)
                     recognitionRepository.stopListening()
-                    callGeminiPro(Prompt.StructuredPrompt(text))
+                    callGeminiPro(Prompt.ChatPrompt(text))
                 }
             }
         }
