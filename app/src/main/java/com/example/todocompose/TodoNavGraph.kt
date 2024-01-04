@@ -23,6 +23,7 @@ import com.example.todocompose.ui.gemini.GeminiRepository
 import com.example.todocompose.ui.gemini.GeminiUseCase
 import com.example.todocompose.ui.gemini.MessageScreen
 import com.example.todocompose.ui.gemini.MessageViewModel
+import com.example.todocompose.ui.gemini.SpeechRecognition
 import com.example.todocompose.ui.gemini.SpeechRecognitionRepository
 import com.example.todocompose.ui.gemini.SpeechRecognitionUseCase
 import com.example.todocompose.ui.gemini.TTSRepository
@@ -83,7 +84,7 @@ fun TodoNavGraph(
         }
         composable(TodoDestinations.MESSAGE_ROUTE) {
             val recognitionRepository: SpeechRecognitionRepository =
-                SpeechRecognitionUseCase(LocalContext.current)
+                SpeechRecognition(LocalContext.current)
             val ttsRepository: TTSRepository =
                 TextToSpeechEngine(LocalContext.current)
             val geminiRepository:GeminiRepository =  GeminiUseCase()
