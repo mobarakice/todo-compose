@@ -1,13 +1,16 @@
 package com.example.todocompose.ui.gemini
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import java.util.Locale
+
 
 interface SpeechRecognitionRepository {
     suspend fun startListening(onResult: (SpeechResult) -> Unit)
@@ -17,14 +20,26 @@ interface SpeechRecognitionRepository {
 data class SpeechResult(val text: String, val timestamp: Long)
 
 class SpeechRecognitionUseCase(private val context: Context) : SpeechRecognitionRepository {
+    private var recognizer: SpeechRecognizer? = null
 
-    private val recognizer: SpeechRecognizer by lazy {
-        SpeechRecognizer.createSpeechRecognizer(context)
+    init {
+        getAvailableVoiceRecognitionService(context)?.let {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(context, it)
+//                ComponentName(
+//                    "com.google.android.as",
+//                    "com.google.android.apps.miphone.aiai.app.AiAiSpeechRecognitionService"
+//                ))
+        }
+
     }
+
+//    private val recognizer: SpeechRecognizer by lazy {
+//        SpeechRecognizer.createSpeechRecognizer(context)
+//    }
 
     override suspend fun startListening(onResult: (SpeechResult) -> Unit) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.apply{
+        intent.apply {
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
@@ -41,11 +56,11 @@ class SpeechRecognitionUseCase(private val context: Context) : SpeechRecognition
         val recognitionListener = object : RecognitionListener {
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(p0: ByteArray?) {
-                Log.i("startListening","onBufferReceived")
+                Log.i("startListening", "onBufferReceived")
             }
 
             override fun onReadyForSpeech(p0: Bundle?) {
-                Log.i("startListening","onReadyForSpeech")
+                Log.i("startListening", "onReadyForSpeech")
             }
 
             override fun onBeginningOfSpeech() {}
@@ -61,16 +76,31 @@ class SpeechRecognitionUseCase(private val context: Context) : SpeechRecognition
             override fun onError(error: Int) {}
 
             override fun onPartialResults(p0: Bundle?) {
-                Log.i("startListening","onPartialResults")
+                Log.i("startListening", "onPartialResults")
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {}
         }
-        recognizer.setRecognitionListener(recognitionListener)
-        recognizer.startListening(intent)
+        recognizer?.setRecognitionListener(recognitionListener)
+        recognizer?.startListening(intent)
     }
 
     override suspend fun stopListening() {
-        recognizer.stopListening()
+        recognizer?.stopListening()
+    }
+
+    private fun getAvailableVoiceRecognitionService(activity: Context): ComponentName? {
+        val services = activity.packageManager.queryIntentServices(
+            Intent(RecognitionService.SERVICE_INTERFACE), 0
+        )
+        for (info in services) {
+            val packageName = info.serviceInfo.packageName
+            val serviceName = info.serviceInfo.name
+            return ComponentName(
+                packageName,
+                serviceName
+            )
+        }
+        return null
     }
 }
